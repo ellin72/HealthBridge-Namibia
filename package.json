@@ -1,0 +1,29 @@
+{
+  "name": "healthbridge-namibia",
+  "version": "1.0.0",
+  "description": "HealthBridge Namibia - Digital Healthcare Platform MVP",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "mobile"
+  ],
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "dev:mobile": "cd mobile && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ../mobile && npm install",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "healthcare",
+    "telehealth",
+    "wellness",
+    "e-learning"
+  ],
+  "author": "HealthBridge Namibia Team",
+  "license": "PROPRIETARY"
+}
+
