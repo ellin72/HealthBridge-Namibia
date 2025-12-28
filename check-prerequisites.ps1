@@ -75,10 +75,16 @@ try {
 # Check Expo CLI (optional)
 Write-Host "Checking Expo CLI (optional for mobile)..." -ForegroundColor Yellow
 try {
-    $expoVersion = expo --version
-    Write-Host "  ✓ Expo CLI $expoVersion is installed" -ForegroundColor Green
+    $expoVersion = npx expo --version 2>&1
+    if ($LASTEXITCODE -eq 0 -and $expoVersion -match '\d+\.\d+\.\d+') {
+        Write-Host "  ✓ Expo CLI $expoVersion is available (via npx)" -ForegroundColor Green
+    } else {
+        throw "Expo not found"
+    }
 } catch {
     Write-Host "  ⚠ Expo CLI is not installed (optional - only needed for mobile development)" -ForegroundColor Yellow
+    Write-Host "    Install with: npm install -g @expo/cli" -ForegroundColor Yellow
+    Write-Host "    Or use: npx expo (no installation needed)" -ForegroundColor Yellow
 }
 
 # Check project dependencies

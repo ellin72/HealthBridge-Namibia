@@ -124,29 +124,35 @@ docker --version
 
 ## Step 4: Install Expo CLI (For Mobile Development - Optional)
 
-If you plan to run the mobile app, install Expo CLI:
-
-```powershell
-npm install -g expo-cli
-```
-
-Or use the newer Expo CLI:
+If you plan to run the mobile app, install the modern Expo CLI:
 
 ```powershell
 npm install -g @expo/cli
 ```
 
+**Important**: The old `expo-cli` package is deprecated. Use `@expo/cli` instead.
+
 ### Verify Installation
 
+The modern way to use Expo is with `npx`:
+
 ```powershell
-expo --version
+npx expo --version
 ```
 
-**Note**: For mobile development, you'll also need:
-- **Android**: Android Studio with Android SDK
-- **iOS**: macOS with Xcode (Windows users can't develop iOS apps natively)
+Or if you want to use it from the mobile directory:
 
-For now, you can test the mobile app using Expo Go on your phone.
+```powershell
+cd mobile
+npx expo --version
+```
+
+**Note**: 
+- You can use `npx expo` from anywhere, or the scripts in `package.json` will automatically use the local Expo installation
+- For mobile development, you'll also need:
+  - **Android**: Android Studio with Android SDK (optional - you can use Expo Go app instead)
+  - **iOS**: macOS with Xcode (Windows users can't develop iOS apps natively)
+- For testing, you can use the **Expo Go** app on your phone (available on App Store and Google Play Store)
 
 ---
 
