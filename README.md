@@ -40,39 +40,26 @@ HealthBridge-Namibia/
 └── phase1.md         # Project charter
 ```
 
-## Quick Start
+## Getting Started
 
-### Prerequisites
-- Node.js 18+ and npm
-- PostgreSQL 14+
-- React Native CLI (for mobile development)
+**📖 For complete setup instructions, see [STARTUP_GUIDE.md](./STARTUP_GUIDE.md)**
 
-### Backend Setup
-```bash
-cd backend
-npm install
-cp .env.example .env
-# Configure your .env file with database credentials
-npx prisma migrate dev
-npm run dev
-```
+The startup guide includes:
+- Detailed prerequisites and installation steps
+- Database setup (Docker and local PostgreSQL)
+- Backend, frontend, and mobile configuration
+- Troubleshooting common issues
+- Quick reference commands
 
-### Frontend Setup
-```bash
-cd frontend
-npm install
-cp .env.example .env
-# Configure API endpoint
-npm start
-```
+### Quick Start (TL;DR)
 
-### Mobile Setup
-```bash
-cd mobile
-npm install
-# For iOS: cd ios && pod install
-npm run android  # or npm run ios
-```
+1. **Prerequisites**: Install Node.js 18+, Docker Desktop, and Git
+2. **Database**: `docker-compose up -d postgres`
+3. **Backend**: `cd backend && npm install && npm run migrate:docker && npm run dev:docker`
+4. **Frontend**: `cd frontend && npm install && npm run dev`
+5. **Mobile** (optional): `cd mobile && npm install && npx expo install --fix && npm start`
+
+**Note**: On Windows, use Docker-based commands (`dev:docker`, `migrate:docker`) to avoid networking issues.
 
 ## User Roles
 
@@ -100,12 +87,12 @@ npm run android  # or npm run ios
 
 ## Documentation
 
-See the `docs/` directory for comprehensive documentation:
-- API Documentation
-- Database Schema
-- Setup Guide
-- Deployment Guide
-- User Guides
+- **[STARTUP_GUIDE.md](./STARTUP_GUIDE.md)** - Complete setup and configuration guide ⭐ **Start here!**
+- **[INSTALLATION_GUIDE.md](./INSTALLATION_GUIDE.md)** - Detailed prerequisite installation (Windows)
+- **docs/API_DOCUMENTATION.md** - API endpoints and usage
+- **docs/DATABASE_SCHEMA.md** - Database structure and relationships
+- **docs/DEPLOYMENT_GUIDE.md** - Production deployment instructions
+- **docs/USER_GUIDE.md** - User-facing feature documentation
 
 ## License
 

@@ -1,0 +1,8 @@
+{
+  "ignore_dirs": [
+    "../backend",
+    "../frontend",
+    "node_modules"
+  ]
+}
+
