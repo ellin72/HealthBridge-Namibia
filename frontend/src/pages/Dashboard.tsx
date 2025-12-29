@@ -7,8 +7,16 @@ import {
   Card,
   CardContent,
   Box,
-  CircularProgress
+  CircularProgress,
+  Avatar,
+  LinearProgress
 } from '@mui/material';
+import {
+  CalendarToday as CalendarIcon,
+  Article as ArticleIcon,
+  Badge as BadgeIcon,
+  AccessTime as TimeIcon
+} from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,78 +40,213 @@ const Dashboard: React.FC = () => {
     {
       title: 'Upcoming Appointments',
       value: appointments?.filter((a: any) => a.status === 'PENDING' || a.status === 'CONFIRMED').length || 0,
-      color: '#1976d2'
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      icon: <CalendarIcon />,
     },
     {
       title: 'Wellness Articles',
       value: wellnessContent?.length || 0,
-      color: '#2e7d32'
+      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      icon: <ArticleIcon />,
     },
     {
-      title: 'Role',
+      title: 'Your Role',
       value: user?.role || 'N/A',
-      color: '#ed6c02'
+      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      icon: <BadgeIcon />,
     }
   ];
 
   return (
     <Layout>
-      <Container>
-        <Typography variant="h4" gutterBottom>
-          Welcome, {user?.firstName}!
-        </Typography>
-        <Typography variant="body1" color="text.secondary" gutterBottom>
-          Here's your HealthBridge dashboard overview
-        </Typography>
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+        <Container maxWidth="xl" sx={{ py: 4 }}>
+          <Box sx={{ mb: 4 }}>
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                color: '#1e293b',
+                mb: 1,
+              }}
+            >
+              Welcome back, {user?.firstName}! 👋
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                color: '#64748b',
+                fontSize: '1.0625rem',
+              }}
+            >
+              Here's your HealthBridge dashboard overview
+            </Typography>
+          </Box>
 
-        <Grid container spacing={3} sx={{ mt: 2 }}>
-          {stats.map((stat, index) => (
-            <Grid item xs={12} sm={6} md={4} key={index}>
-              <Card>
-                <CardContent>
-                  <Typography color="text.secondary" gutterBottom>
-                    {stat.title}
-                  </Typography>
-                  <Typography variant="h4" sx={{ color: stat.color }}>
-                    {stat.value}
-                  </Typography>
-                </CardContent>
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {stats.map((stat, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <Card
+                  sx={{
+                    background: stat.gradient,
+                    color: 'white',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      right: 0,
+                      width: '100px',
+                      height: '100px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      borderRadius: '50%',
+                      transform: 'translate(30px, -30px)',
+                    },
+                  }}
+                >
+                  <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                      <Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            opacity: 0.9,
+                            fontWeight: 500,
+                            mb: 1,
+                          }}
+                        >
+                          {stat.title}
+                        </Typography>
+                        <Typography
+                          variant="h3"
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: '2.5rem',
+                          }}
+                        >
+                          {stat.value}
+                        </Typography>
+                      </Box>
+                      <Avatar
+                        sx={{
+                          width: 56,
+                          height: 56,
+                          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                          color: 'white',
+                        }}
+                      >
+                        {stat.icon}
+                      </Avatar>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+
+          <Box sx={{ mt: 4 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 600,
+                color: '#1e293b',
+                mb: 3,
+              }}
+            >
+              Recent Appointments
+            </Typography>
+            {appointmentsLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : appointments?.length > 0 ? (
+              <Grid container spacing={3}>
+                {appointments.slice(0, 3).map((appointment: any) => (
+                  <Grid item xs={12} md={6} lg={4} key={appointment.id}>
+                    <Card
+                      sx={{
+                        height: '100%',
+                        border: '1px solid #e2e8f0',
+                      }}
+                    >
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          <Avatar
+                            sx={{
+                              width: 48,
+                              height: 48,
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              mr: 2,
+                            }}
+                          >
+                            {appointment.provider.firstName?.[0]}
+                            {appointment.provider.lastName?.[0]}
+                          </Avatar>
+                          <Box>
+                            <Typography
+                              variant="h6"
+                              sx={{
+                                fontWeight: 600,
+                                color: '#1e293b',
+                                mb: 0.5,
+                              }}
+                            >
+                              Dr. {appointment.provider.firstName} {appointment.provider.lastName}
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: '#64748b',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                              }}
+                            >
+                              <TimeIcon sx={{ fontSize: 16 }} />
+                              {new Date(appointment.appointmentDate).toLocaleString()}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box
+                          sx={{
+                            display: 'inline-block',
+                            px: 2,
+                            py: 0.5,
+                            borderRadius: 2,
+                            backgroundColor:
+                              appointment.status === 'CONFIRMED'
+                                ? 'rgba(16, 185, 129, 0.1)'
+                                : appointment.status === 'PENDING'
+                                ? 'rgba(245, 158, 11, 0.1)'
+                                : 'rgba(100, 116, 139, 0.1)',
+                            color:
+                              appointment.status === 'CONFIRMED'
+                                ? '#059669'
+                                : appointment.status === 'PENDING'
+                                ? '#d97706'
+                                : '#64748b',
+                            fontWeight: 600,
+                            fontSize: '0.8125rem',
+                          }}
+                        >
+                          {appointment.status}
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Card sx={{ p: 4, textAlign: 'center' }}>
+                <Typography variant="body1" color="text.secondary">
+                  No appointments found. Book your first appointment to get started!
+                </Typography>
               </Card>
-            </Grid>
-          ))}
-        </Grid>
-
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h5" gutterBottom>
-            Recent Appointments
-          </Typography>
-          {appointmentsLoading ? (
-            <CircularProgress />
-          ) : appointments?.length > 0 ? (
-            <Grid container spacing={2} sx={{ mt: 2 }}>
-              {appointments.slice(0, 3).map((appointment: any) => (
-                <Grid item xs={12} key={appointment.id}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6">
-                        {appointment.provider.firstName} {appointment.provider.lastName}
-                      </Typography>
-                      <Typography color="text.secondary">
-                        {new Date(appointment.appointmentDate).toLocaleString()}
-                      </Typography>
-                      <Typography>
-                        Status: {appointment.status}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          ) : (
-            <Typography>No appointments found</Typography>
-          )}
-        </Box>
-      </Container>
+            )}
+          </Box>
+        </Container>
+      </Box>
     </Layout>
   );
 };

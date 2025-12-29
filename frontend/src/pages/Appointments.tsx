@@ -17,7 +17,9 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Alert
+  Alert,
+  CircularProgress,
+  Avatar
 } from '@mui/material';
 import Layout from '../components/Layout';
 import api from '../services/authService';
@@ -74,102 +76,259 @@ const Appointments: React.FC = () => {
 
   return (
     <Layout>
-      <Container>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4">Appointments</Typography>
-          {user?.role === 'PATIENT' && (
-            <Button variant="contained" onClick={() => setOpen(true)}>
-              Book Appointment
-            </Button>
-          )}
-        </Box>
-
-        {isLoading ? (
-          <Typography>Loading...</Typography>
-        ) : appointments?.length > 0 ? (
-          <Grid container spacing={2}>
-            {appointments.map((appointment: any) => (
-              <Grid item xs={12} key={appointment.id}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6">
-                      {user?.role === 'PATIENT'
-                        ? `Dr. ${appointment.provider.firstName} ${appointment.provider.lastName}`
-                        : `${appointment.patient.firstName} ${appointment.patient.lastName}`}
-                    </Typography>
-                    <Typography color="text.secondary">
-                      {new Date(appointment.appointmentDate).toLocaleString()}
-                    </Typography>
-                    <Typography>Status: {appointment.status}</Typography>
-                    {appointment.notes && (
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        Notes: {appointment.notes}
-                      </Typography>
-                    )}
-                    {user?.role === 'HEALTHCARE_PROVIDER' && appointment.status === 'PENDING' && (
-                      <Box sx={{ mt: 2 }}>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => handleStatusChange(appointment.id, 'CONFIRMED')}
-                        >
-                          Confirm
-                        </Button>
-                      </Box>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        ) : (
-          <Typography>No appointments found</Typography>
-        )}
-
-        <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Book New Appointment</DialogTitle>
-          <DialogContent>
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel>Provider</InputLabel>
-              <Select
-                value={formData.providerId}
-                label="Provider"
-                onChange={(e) => setFormData({ ...formData, providerId: e.target.value })}
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+        <Container maxWidth="xl" sx={{ py: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+            <Box>
+              <Typography
+                variant="h4"
+                sx={{
+                  fontWeight: 700,
+                  color: '#1e293b',
+                  mb: 0.5,
+                }}
               >
-                {providers?.map((provider: any) => (
-                  <MenuItem key={provider.id} value={provider.id}>
-                    {provider.firstName} {provider.lastName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              type="datetime-local"
-              label="Appointment Date & Time"
-              sx={{ mt: 2 }}
-              value={formData.appointmentDate}
-              onChange={(e) => setFormData({ ...formData, appointmentDate: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              label="Notes"
-              sx={{ mt: 2 }}
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} variant="contained" disabled={!formData.providerId || !formData.appointmentDate}>
-              Book
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Container>
+                Appointments
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748b' }}>
+                Manage your healthcare appointments
+              </Typography>
+            </Box>
+            {user?.role === 'PATIENT' && (
+              <Button
+                variant="contained"
+                onClick={() => setOpen(true)}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  px: 3,
+                  py: 1.5,
+                  fontWeight: 600,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)',
+                  },
+                }}
+              >
+                Book Appointment
+              </Button>
+            )}
+          </Box>
+
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+              <CircularProgress />
+            </Box>
+          ) : appointments?.length > 0 ? (
+            <Grid container spacing={3}>
+              {appointments.map((appointment: any) => (
+                <Grid item xs={12} md={6} lg={4} key={appointment.id}>
+                  <Card
+                    sx={{
+                      height: '100%',
+                      border: '1px solid #e2e8f0',
+                      transition: 'all 0.3s ease-in-out',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                      },
+                    }}
+                  >
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Avatar
+                          sx={{
+                            width: 56,
+                            height: 56,
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            mr: 2,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {user?.role === 'PATIENT'
+                            ? `${appointment.provider.firstName?.[0]}${appointment.provider.lastName?.[0]}`
+                            : `${appointment.patient.firstName?.[0]}${appointment.patient.lastName?.[0]}`}
+                        </Avatar>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontWeight: 600,
+                              color: '#1e293b',
+                              mb: 0.5,
+                            }}
+                          >
+                            {user?.role === 'PATIENT'
+                              ? `Dr. ${appointment.provider.firstName} ${appointment.provider.lastName}`
+                              : `${appointment.patient.firstName} ${appointment.patient.lastName}`}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: '#64748b',
+                            }}
+                          >
+                            {new Date(appointment.appointmentDate).toLocaleString()}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: 'inline-block',
+                          px: 2,
+                          py: 0.5,
+                          borderRadius: 2,
+                          backgroundColor:
+                            appointment.status === 'CONFIRMED'
+                              ? 'rgba(16, 185, 129, 0.1)'
+                              : appointment.status === 'PENDING'
+                              ? 'rgba(245, 158, 11, 0.1)'
+                              : 'rgba(100, 116, 139, 0.1)',
+                          color:
+                            appointment.status === 'CONFIRMED'
+                              ? '#059669'
+                              : appointment.status === 'PENDING'
+                              ? '#d97706'
+                              : '#64748b',
+                          fontWeight: 600,
+                          fontSize: '0.8125rem',
+                          mb: 2,
+                        }}
+                      >
+                        {appointment.status}
+                      </Box>
+                      {appointment.notes && (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: '#64748b',
+                            mt: 1,
+                            p: 1.5,
+                            backgroundColor: '#f1f5f9',
+                            borderRadius: 2,
+                          }}
+                        >
+                          {appointment.notes}
+                        </Typography>
+                      )}
+                      {user?.role === 'HEALTHCARE_PROVIDER' && appointment.status === 'PENDING' && (
+                        <Box sx={{ mt: 2 }}>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={() => handleStatusChange(appointment.id, 'CONFIRMED')}
+                            sx={{
+                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              fontWeight: 600,
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                              },
+                            }}
+                          >
+                            Confirm Appointment
+                          </Button>
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Card sx={{ p: 6, textAlign: 'center' }}>
+              <Typography variant="h6" sx={{ color: '#64748b', mb: 1 }}>
+                No appointments found
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                {user?.role === 'PATIENT'
+                  ? 'Book your first appointment to get started!'
+                  : 'No appointments scheduled yet.'}
+              </Typography>
+            </Card>
+          )}
+
+          <Dialog
+            open={open}
+            onClose={() => setOpen(false)}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 3,
+              },
+            }}
+          >
+            <DialogTitle
+              sx={{
+                fontWeight: 600,
+                fontSize: '1.5rem',
+                color: '#1e293b',
+                pb: 1,
+              }}
+            >
+              Book New Appointment
+            </DialogTitle>
+            <DialogContent>
+              <FormControl fullWidth sx={{ mt: 2 }}>
+                <InputLabel>Provider</InputLabel>
+                <Select
+                  value={formData.providerId}
+                  label="Provider"
+                  onChange={(e) => setFormData({ ...formData, providerId: e.target.value })}
+                >
+                  {providers?.map((provider: any) => (
+                    <MenuItem key={provider.id} value={provider.id}>
+                      Dr. {provider.firstName} {provider.lastName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                fullWidth
+                type="datetime-local"
+                label="Appointment Date & Time"
+                sx={{ mt: 2 }}
+                value={formData.appointmentDate}
+                onChange={(e) => setFormData({ ...formData, appointmentDate: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                label="Notes (optional)"
+                sx={{ mt: 2 }}
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Any additional information about your appointment..."
+              />
+            </DialogContent>
+            <DialogActions sx={{ p: 3, pt: 2 }}>
+              <Button
+                onClick={() => setOpen(false)}
+                sx={{
+                  color: '#64748b',
+                  fontWeight: 500,
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreate}
+                variant="contained"
+                disabled={!formData.providerId || !formData.appointmentDate}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  fontWeight: 600,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)',
+                  },
+                }}
+              >
+                Book Appointment
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </Container>
+      </Box>
     </Layout>
   );
 };
