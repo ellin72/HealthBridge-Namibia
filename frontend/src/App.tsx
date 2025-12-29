@@ -8,10 +8,14 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Appointments from './pages/Appointments';
+import TelehealthPro from './pages/TelehealthPro';
 import WellnessHub from './pages/WellnessHub';
+import WellnessTools from './pages/WellnessTools';
 import LearningZone from './pages/LearningZone';
+import ResearchSupport from './pages/ResearchSupport';
 import Profile from './pages/Profile';
 import UserManagement from './pages/UserManagement';
+import SymptomChecker from './pages/SymptomChecker';
 
 const theme = createTheme({
   palette: {
@@ -192,6 +196,14 @@ function App() {
               }
             />
             <Route
+              path="/telehealth-pro"
+              element={
+                <PrivateRoute>
+                  <TelehealthPro />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/wellness"
               element={
                 <PrivateRoute>
@@ -200,10 +212,26 @@ function App() {
               }
             />
             <Route
+              path="/wellness-tools"
+              element={
+                <PrivateRoute>
+                  <WellnessTools />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/learning"
               element={
                 <PrivateRoute>
                   <LearningZone />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/research"
+              element={
+                <PrivateRoute>
+                  <ResearchSupport />
                 </PrivateRoute>
               }
             />
@@ -220,6 +248,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <UserManagement />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/symptom-checker"
+              element={
+                <PrivateRoute>
+                  <SymptomChecker />
                 </PrivateRoute>
               }
             />

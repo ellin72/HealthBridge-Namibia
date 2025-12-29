@@ -37,6 +37,103 @@ enum AssignmentStatus {
   GRADED
 }
 
+enum VideoProvider {
+  ZOOM
+  GOOGLE_MEET
+  CUSTOM
+}
+
+enum HabitType {
+  NUTRITION
+  FITNESS
+  SLEEP
+  MEDITATION
+  HYDRATION
+  OTHER
+}
+
+enum ChallengeStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ResearchField {
+  HEALTH
+  EDUCATION
+  TECHNOLOGY
+  AGRICULTURE
+  BUSINESS
+  SOCIAL_SCIENCES
+  OTHER
+}
+
+enum ProposalStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  REVISED
+}
+
+enum MilestoneType {
+  PROPOSAL
+  ETHICS_APPROVAL
+  DATA_COLLECTION
+  ANALYSIS
+  FINAL_SUBMISSION
+}
+
+enum MilestoneStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+}
+
+enum CollaborationType {
+  FOLDER
+  NOTE
+  CHAT
+}
+
+enum Language {
+  ENGLISH
+  OSHIWAMBO
+  AFRIKAANS
+}
+
+enum MedicalAidScheme {
+  NAMMED
+  MEDICAL_AID_FUND
+  PROSANA
+  OTHER
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  PAYTODAY
+  SNAPSCAN
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum TriageUrgency {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+  EMERGENCY
+}
+
 model User {
   id            String   @id @default(uuid())
   email         String   @unique
@@ -46,6 +143,7 @@ model User {
   phone         String?
   role          UserRole
   isActive      Boolean  @default(true)
+  preferredLanguage Language @default(ENGLISH)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -56,9 +154,28 @@ model User {
   wellnessContent          WellnessContent[]
   assignments              Assignment[]
   submittedAssignments     AssignmentSubmission[]
+  
+  // Phase 2 Relations
+  patientHistory           PatientHistory[]
+  wellnessPlans            WellnessPlan[]
+  habitTrackers            HabitTracker[]
+  challengeParticipations  ChallengeParticipation[]
+  researchTopics           ResearchTopic[]
+  researchProposals        ResearchProposal[]
+  supervisorMatches        SupervisorMatch[] @relation("StudentSupervisorMatches")
+  supervisorMatchesAsSupervisor SupervisorMatch[] @relation("SupervisorMatches")
+  researchMilestones       ResearchMilestone[]
+  researchCollaborations   ResearchCollaboration[]
+  
+  // Phase 3: Tips.md Improvements
+  medicalAidInfo           MedicalAidInfo?
+  triageAssessments        TriageAssessment[]
+  payments                 Payment[]
+  offlineSyncQueue         OfflineSyncQueue[]
 
   @@index([email])
   @@index([role])
+  @@index([preferredLanguage])
 }
 
 model Appointment {
@@ -74,6 +191,7 @@ model Appointment {
   patient       User              @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
   provider      User              @relation("ProviderAppointments", fields: [providerId], references: [id], onDelete: Cascade)
   consultationNotes ConsultationNote[]
+  videoConsultation VideoConsultation?
 
   @@index([patientId])
   @@index([providerId])
@@ -172,5 +290,392 @@ model AssignmentSubmission {
   @@index([assignmentId])
   @@index([studentId])
   @@unique([assignmentId, studentId])
+}
+
+// ========== PHASE 2: TELEHEALTH PRO ==========
+
+model VideoConsultation {
+  id              String          @id @default(uuid())
+  appointmentId   String          @unique
+  provider        VideoProvider   @default(ZOOM)
+  meetingUrl      String
+  meetingId       String?
+  meetingPassword String?
+  startTime       DateTime?
+  endTime         DateTime?
+  duration        Int?            // in minutes
+  recordingUrl    String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  appointment     Appointment     @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+}
+
+model PatientHistory {
+  id              String          @id @default(uuid())
+  patientId       String
+  providerId      String?
+  medicalHistory  String?         // JSON or text
+  allergies       String?         // JSON array
+  medications     String?         // JSON array
+  vitalSigns      String?         // JSON object
+  labResults      String?         // JSON array
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  patient         User            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([providerId])
+}
+
+// ========== PHASE 2: INTERACTIVE WELLNESS TOOLS ==========
+
+model WellnessPlan {
+  id              String          @id @default(uuid())
+  userId          String
+  title           String
+  description     String
+  goals           String          // JSON array of goals
+  startDate       DateTime
+  endDate         DateTime?
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model HabitTracker {
+  id              String          @id @default(uuid())
+  userId          String
+  habitType       HabitType
+  habitName       String
+  targetValue     Float?          // e.g., 8 hours of sleep, 2L water
+  unit            String?         // e.g., "hours", "liters", "meals"
+  currentStreak   Int             @default(0)
+  longestStreak   Int             @default(0)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries         HabitEntry[]
+
+  @@index([userId])
+  @@index([habitType])
+  @@index([isActive])
+}
+
+model HabitEntry {
+  id              String          @id @default(uuid())
+  habitTrackerId  String
+  date            DateTime        @default(now())
+  value           Float
+  notes           String?
+  createdAt       DateTime        @default(now())
+
+  habitTracker    HabitTracker    @relation(fields: [habitTrackerId], references: [id], onDelete: Cascade)
+
+  @@index([habitTrackerId])
+  @@index([date])
+  @@unique([habitTrackerId, date])
+}
+
+model WellnessChallenge {
+  id              String          @id @default(uuid())
+  title           String
+  description     String
+  category        WellnessCategory
+  startDate       DateTime
+  endDate         DateTime
+  targetGoal      String          // e.g., "30 days of exercise"
+  reward          String?
+  status          ChallengeStatus @default(UPCOMING)
+  createdBy       String?         // Admin or Wellness Coach ID
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  participations  ChallengeParticipation[]
+
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model ChallengeParticipation {
+  id              String          @id @default(uuid())
+  challengeId     String
+  userId          String
+  progress        Int             @default(0) // percentage or count
+  completed       Boolean         @default(false)
+  joinedAt        DateTime        @default(now())
+  completedAt     DateTime?
+
+  challenge       WellnessChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([challengeId])
+  @@index([userId])
+  @@unique([challengeId, userId])
+}
+
+// ========== PHASE 2: RESEARCH SUPPORT SECTION ==========
+
+model ResearchTopic {
+  id              String          @id @default(uuid())
+  userId          String
+  field           ResearchField
+  topic           String
+  description     String?
+  keywords        String?         // JSON array
+  isGenerated     Boolean         @default(false) // AI-generated or user-created
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  proposals       ResearchProposal[]
+
+  @@index([userId])
+  @@index([field])
+}
+
+model ResearchProposal {
+  id              String          @id @default(uuid())
+  topicId         String?
+  userId          String
+  title            String
+  abstract         String
+  objectives       String          // JSON array
+  methodology      String
+  expectedOutcomes String?
+  status           ProposalStatus  @default(DRAFT)
+  fileUrl          String?         // Uploaded proposal document
+  submittedAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  topic            ResearchTopic?  @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  milestones       ResearchMilestone[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([topicId])
+}
+
+model ResearchResource {
+  id              String          @id @default(uuid())
+  title           String
+  description     String?
+  field           ResearchField
+  resourceType    String          // "article", "journal", "dataset", "book", etc.
+  url             String?
+  fileUrl         String?
+  fileName        String?
+  author          String?
+  publisher       String?
+  publishedDate   DateTime?
+  tags            String?         // JSON array
+  isPublic        Boolean         @default(true)
+  uploadedBy      String?         // User ID if uploaded
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([field])
+  @@index([resourceType])
+  @@index([isPublic])
+}
+
+model SupervisorMatch {
+  id              String          @id @default(uuid())
+  studentId       String
+  supervisorId    String
+  field           ResearchField
+  status          String          @default("PENDING") // PENDING, ACCEPTED, REJECTED, ACTIVE, COMPLETED
+  requestMessage  String?
+  responseMessage String?
+  matchedAt       DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  student         User            @relation("StudentSupervisorMatches", fields: [studentId], references: [id], onDelete: Cascade)
+  supervisor      User            @relation("SupervisorMatches", fields: [supervisorId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([supervisorId])
+  @@index([status])
+  @@unique([studentId, supervisorId])
+}
+
+model ResearchMilestone {
+  id              String          @id @default(uuid())
+  proposalId      String
+  userId          String
+  milestoneType   MilestoneType
+  title           String
+  description     String?
+  dueDate         DateTime?
+  status          MilestoneStatus @default(NOT_STARTED)
+  completedAt     DateTime?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  proposal        ResearchProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+  @@index([userId])
+  @@index([status])
+  @@index([milestoneType])
+}
+
+model ResearchCollaboration {
+  id              String          @id @default(uuid())
+  proposalId      String?         // Optional - can be standalone
+  userId          String
+  collaborationType CollaborationType
+  title           String
+  content         String          // For notes/chat messages
+  fileUrl         String?         // For shared files
+  parentId        String?         // For nested folders/threads
+  isShared        Boolean         @default(false)
+  sharedWith      String?         // JSON array of user IDs
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([proposalId])
+  @@index([collaborationType])
+  @@index([parentId])
+}
+
+// ========== PHASE 3: TIPS.MD IMPROVEMENTS ==========
+
+model MedicalAidInfo {
+  id              String          @id @default(uuid())
+  userId          String          @unique
+  scheme          MedicalAidScheme
+  schemeName      String?         // For OTHER scheme
+  memberNumber    String
+  policyNumber    String?
+  isActive        Boolean         @default(true)
+  verifiedAt      DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  claims          MedicalAidClaim[]
+
+  @@index([userId])
+  @@index([scheme])
+  @@index([memberNumber])
+}
+
+model MedicalAidClaim {
+  id              String          @id @default(uuid())
+  medicalAidInfoId String
+  appointmentId  String?
+  claimNumber    String          @unique
+  amount         Float
+  status         String          // PENDING, APPROVED, REJECTED, PAID
+  submittedAt    DateTime        @default(now())
+  processedAt    DateTime?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  medicalAidInfo MedicalAidInfo  @relation(fields: [medicalAidInfoId], references: [id], onDelete: Cascade)
+
+  @@index([medicalAidInfoId])
+  @@index([claimNumber])
+  @@index([status])
+}
+
+model TriageAssessment {
+  id              String          @id @default(uuid())
+  userId          String
+  symptoms        String          // JSON array of symptoms
+  description     String?
+  urgency         TriageUrgency
+  aiRecommendation String?        // AI-generated recommendation
+  aiConfidence    Float?          // 0-1 confidence score
+  recommendedAction String?       // e.g., "See doctor within 24 hours"
+  followUpDate    DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([urgency])
+  @@index([createdAt])
+}
+
+model Payment {
+  id              String          @id @default(uuid())
+  userId          String
+  appointmentId  String?
+  amount          Float
+  currency        String          @default("NAD")
+  method          PaymentMethod
+  status          PaymentStatus   @default(PENDING)
+  transactionId  String?         // External payment gateway transaction ID
+  paymentReference String?       // For mobile payments
+  metadata        String?         // JSON for additional payment data
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([transactionId])
+  @@index([createdAt])
+}
+
+model OfflineSyncQueue {
+  id              String          @id @default(uuid())
+  userId          String
+  action          String          // CREATE, UPDATE, DELETE
+  entityType      String          // APPOINTMENT, CONSULTATION, etc.
+  entityId        String?
+  payload         String          // JSON data
+  synced          Boolean         @default(false)
+  syncedAt        DateTime?
+  error           String?
+  retryCount      Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([synced])
+  @@index([createdAt])
+}
+
+model FHIRResource {
+  id              String          @id @default(uuid())
+  resourceType  String          // Patient, Observation, etc.
+  fhirId          String          @unique
+  resourceData   String          // JSON FHIR resource
+  version         Int             @default(1)
+  lastUpdated     DateTime        @default(now())
+  createdAt       DateTime        @default(now())
+
+  @@index([resourceType])
+  @@index([fhirId])
+  @@index([lastUpdated])
 }
 

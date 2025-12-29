@@ -22,10 +22,14 @@ import {
   School as SchoolIcon,
   Person as PersonIcon,
   Logout as LogoutIcon,
-  People as PeopleIcon
+  People as PeopleIcon,
+  VideoCall as VideoCallIcon,
+  TrackChanges as TrackIcon,
+  Psychology as ResearchIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import LanguageSelector from './LanguageSelector';
 
 // Import logo - update path based on your actual logo file name
 // For Vite, you can use: import logoPath from '../assets/images/healthbridge-logo.png';
@@ -48,8 +52,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
+    { text: 'Telehealth Pro', icon: <VideoCallIcon />, path: '/telehealth-pro' },
+    { text: 'Symptom Checker', icon: <TrackIcon />, path: '/symptom-checker' },
     { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
+    { text: 'Wellness Tools', icon: <TrackIcon />, path: '/wellness-tools' },
     { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
+    ...(user?.role === 'STUDENT'
+      ? [{ text: 'Research Support', icon: <ResearchIcon />, path: '/research' }]
+      : []),
     ...(user?.role === 'ADMIN'
       ? [{ text: 'User Management', icon: <PeopleIcon />, path: '/users' }]
       : []),
@@ -214,6 +224,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <LanguageSelector />
             <Typography
               variant="body2"
               sx={{

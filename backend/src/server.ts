@@ -13,6 +13,13 @@ import appointmentRoutes from './routes/appointments';
 import consultationRoutes from './routes/consultations';
 import wellnessRoutes from './routes/wellness';
 import learningRoutes from './routes/learning';
+import telehealthProRoutes from './routes/telehealthPro';
+import wellnessToolsRoutes from './routes/wellnessTools';
+import researchRoutes from './routes/research';
+import triageRoutes from './routes/triage';
+import medicalAidRoutes from './routes/medicalAid';
+import paymentRoutes from './routes/payments';
+import offlineSyncRoutes from './routes/offlineSync';
 
 // Load environment variables
 dotenv.config();
@@ -49,6 +56,13 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/consultations', consultationRoutes);
 app.use('/api/wellness', wellnessRoutes);
 app.use('/api/learning', learningRoutes);
+app.use('/api/telehealth-pro', telehealthProRoutes);
+app.use('/api/wellness-tools', wellnessToolsRoutes);
+app.use('/api/research', researchRoutes);
+app.use('/api/triage', triageRoutes);
+app.use('/api/medical-aid', medicalAidRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/offline-sync', offlineSyncRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

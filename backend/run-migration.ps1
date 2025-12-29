@@ -11,7 +11,7 @@ docker run --rm `
     -w /app `
     --network healthbridge-namibia_default `
     -e DATABASE_URL="postgresql://healthbridge:healthbridge123@postgres:5432/healthbridge?schema=public" `
-    node:18-alpine sh -c "npm install && npx prisma migrate dev"
+    node:18 sh -c "npm install && npx prisma db push"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n✅ Migrations completed successfully!" -ForegroundColor Green
