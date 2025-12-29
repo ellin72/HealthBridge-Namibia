@@ -9,6 +9,7 @@ import { PrismaClient } from '@prisma/client';
 // Import routes
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
+import providerRoutes from './routes/providers';
 import appointmentRoutes from './routes/appointments';
 import consultationRoutes from './routes/consultations';
 import wellnessRoutes from './routes/wellness';
@@ -55,6 +56,8 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+// Mount providers route BEFORE users route to avoid route conflicts
+app.use('/api/users/providers', providerRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/consultations', consultationRoutes);

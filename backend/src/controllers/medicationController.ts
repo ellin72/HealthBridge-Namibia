@@ -93,7 +93,7 @@ export const updateMedication = async (req: AuthRequest, res: Response) => {
         frequency,
         times: times ? JSON.stringify(times) : undefined,
         startDate: startDate ? new Date(startDate) : undefined,
-        endDate: endDate ? new Date(endDate) : null : undefined,
+        endDate: endDate !== undefined ? (endDate ? new Date(endDate) : null) : undefined,
         notes,
         status,
         isActive,

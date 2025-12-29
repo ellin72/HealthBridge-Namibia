@@ -49,6 +49,11 @@ export const getUserById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
+    // Prevent "providers" from being treated as an ID
+    if (id === 'providers') {
+      return res.status(404).json({ message: 'Route not found' });
+    }
+
     // Users can only view their own profile unless they're admin
     if (req.user?.id !== id && req.user?.role !== 'ADMIN') {
       return res.status(403).json({ message: 'Access denied' });
@@ -185,6 +190,55 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('Delete user error:', error);
     res.status(500).json({ message: 'Failed to delete user', error: error.message });
+  }
+};
+
+// Get healthcare providers (accessible to patients for booking appointments)
+export const getProviders = async (req: AuthRequest, res: Response) => {
+  try {
+    console.log('getProviders called');
+    console.log('User:', req.user);
+    
+    // This endpoint is accessible to all authenticated users
+    const { search } = req.query;
+
+    const where: any = {
+      role: 'HEALTHCARE_PROVIDER',
+      isActive: true
+    };
+
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search as string, mode: 'insensitive' } },
+        { lastName: { contains: search as string, mode: 'insensitive' } },
+        { email: { contains: search as string, mode: 'insensitive' } }
+      ];
+    }
+
+    const providers = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        role: true,
+        createdAt: true
+      },
+      orderBy: [
+        { lastName: 'asc' },
+        { firstName: 'asc' }
+      ]
+    });
+
+    console.log(`Found ${providers.length} healthcare providers`);
+    console.log('Providers:', providers.map(p => `${p.firstName} ${p.lastName} (${p.role})`));
+
+    res.json(providers);
+  } catch (error: any) {
+    console.error('Get providers error:', error);
+    res.status(500).json({ message: 'Failed to get providers', error: error.message });
   }
 };
 

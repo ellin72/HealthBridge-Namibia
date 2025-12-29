@@ -40,10 +40,32 @@ const Appointments: React.FC = () => {
     () => api.get('/appointments').then(res => res.data)
   );
 
-  const { data: providers } = useQuery(
+  const { data: providers, isLoading: providersLoading, error: providersError } = useQuery(
     'providers',
-    () => api.get('/users?role=HEALTHCARE_PROVIDER').then(res => res.data),
-    { enabled: user?.role === 'PATIENT' }
+    async () => {
+      try {
+        const response = await api.get('/users/providers');
+        console.log('Providers API response:', response);
+        console.log('Providers data:', response.data);
+        console.log('Providers count:', Array.isArray(response.data) ? response.data.length : 'Not an array');
+        return response.data;
+      } catch (error: any) {
+        console.error('Error fetching providers:', error);
+        console.error('Error response:', error.response);
+        throw error;
+      }
+    },
+    { 
+      enabled: user?.role === 'PATIENT',
+      retry: 1,
+      onError: (error: any) => {
+        console.error('Providers query error:', error);
+        if (error.response) {
+          console.error('Error status:', error.response.status);
+          console.error('Error data:', error.response.data);
+        }
+      }
+    }
   );
 
   const createMutation = useMutation(
@@ -269,18 +291,49 @@ const Appointments: React.FC = () => {
             <DialogContent>
               <FormControl fullWidth sx={{ mt: 2 }}>
                 <InputLabel>Provider</InputLabel>
-                <Select
-                  value={formData.providerId}
-                  label="Provider"
-                  onChange={(e) => setFormData({ ...formData, providerId: e.target.value })}
-                >
-                  {providers?.map((provider: any) => (
-                    <MenuItem key={provider.id} value={provider.id}>
-                      Dr. {provider.firstName} {provider.lastName}
-                    </MenuItem>
-                  ))}
-                </Select>
+                {providersLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : providersError ? (
+                  <Alert severity="error" sx={{ mt: 1 }}>
+                    Failed to load providers. Please try again.
+                  </Alert>
+                ) : (
+                  <Select
+                    value={formData.providerId}
+                    label="Provider"
+                    onChange={(e) => setFormData({ ...formData, providerId: e.target.value })}
+                  >
+                    {providers && Array.isArray(providers) && providers.length > 0 ? (
+                      providers.map((provider: any) => (
+                        <MenuItem key={provider.id} value={provider.id}>
+                          Dr. {provider.firstName} {provider.lastName}
+                        </MenuItem>
+                      ))
+                    ) : (
+                      <MenuItem disabled>
+                        {providersLoading ? 'Loading...' : 'No providers available'}
+                      </MenuItem>
+                    )}
+                  </Select>
+                )}
               </FormControl>
+              {providersError && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  Error loading providers: {providersError.message || 'Unknown error'}
+                </Alert>
+              )}
+              {providers && Array.isArray(providers) && providers.length === 0 && !providersLoading && !providersError && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  No healthcare providers found. Please contact an administrator.
+                </Alert>
+              )}
+              {user?.role !== 'PATIENT' && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  Only patients can book appointments. Current role: {user?.role}
+                </Alert>
+              )}
               <TextField
                 fullWidth
                 type="datetime-local"
