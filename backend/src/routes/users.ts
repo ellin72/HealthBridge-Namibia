@@ -1,5 +1,5 @@
 import express from 'express';
-import { getUsers, getUserById, updateUser, deleteUser } from '../controllers/userController';
+import { getUsers, getUserById, updateUser, deleteUser, createUser } from '../controllers/userController';
 import { authenticate, authorize } from '../middleware/auth';
 import { UserRole } from '@prisma/client';
 
@@ -10,6 +10,9 @@ router.use(authenticate);
 
 // Get all users (Admin only)
 router.get('/', authorize(UserRole.ADMIN), getUsers);
+
+// Create user (Admin only)
+router.post('/', authorize(UserRole.ADMIN), createUser);
 
 // Get user by ID
 router.get('/:id', getUserById);

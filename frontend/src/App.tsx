@@ -3,6 +3,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -10,6 +11,7 @@ import Appointments from './pages/Appointments';
 import WellnessHub from './pages/WellnessHub';
 import LearningZone from './pages/LearningZone';
 import Profile from './pages/Profile';
+import UserManagement from './pages/UserManagement';
 
 const theme = createTheme({
   palette: {
@@ -170,6 +172,7 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
+            <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route
@@ -212,7 +215,14 @@ function App() {
                 </PrivateRoute>
               }
             />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route
+              path="/users"
+              element={
+                <PrivateRoute>
+                  <UserManagement />
+                </PrivateRoute>
+              }
+            />
           </Routes>
         </Router>
       </AuthProvider>

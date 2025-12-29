@@ -7,8 +7,17 @@ import {
   Button,
   Typography,
   Box,
-  Alert
+  Alert,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
+import {
+  ArrowBack as ArrowBackIcon,
+  Email as EmailIcon,
+  Lock as LockIcon,
+  Visibility,
+  VisibilityOff
+} from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
 // Import logo - Place logo in public folder as /healthbridge-logo.png
@@ -20,6 +29,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -46,6 +56,7 @@ const Login: React.FC = () => {
         alignItems: 'center',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         position: 'relative',
+        py: 4,
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -68,6 +79,24 @@ const Login: React.FC = () => {
             zIndex: 1,
           }}
         >
+          {/* Back Button */}
+          <IconButton
+            onClick={() => navigate('/')}
+            sx={{
+              position: 'absolute',
+              top: -60,
+              left: 0,
+              color: 'white',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              },
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+
           <Paper
             elevation={24}
             sx={{
@@ -75,6 +104,17 @@ const Login: React.FC = () => {
               width: '100%',
               borderRadius: 4,
               backgroundColor: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '4px',
+                background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+              },
             }}
           >
             <Box sx={{ textAlign: 'center', mb: 4 }}>
@@ -139,11 +179,22 @@ const Login: React.FC = () => {
                 autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <EmailIcon sx={{ color: '#94a3b8' }} />
+                    </InputAdornment>
+                  ),
+                }}
                 sx={{
                   mb: 2,
                   '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
                     '&:hover fieldset': {
-                      borderColor: '#2563eb',
+                      borderColor: '#667eea',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#667eea',
                     },
                   },
                 }}
@@ -154,16 +205,38 @@ const Login: React.FC = () => {
                 fullWidth
                 name="password"
                 label="Password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 id="password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LockIcon sx={{ color: '#94a3b8' }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        size="small"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
                 sx={{
                   mb: 2,
                   '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
                     '&:hover fieldset': {
-                      borderColor: '#2563eb',
+                      borderColor: '#667eea',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#667eea',
                     },
                   },
                 }}
@@ -177,30 +250,47 @@ const Login: React.FC = () => {
                   mt: 3,
                   mb: 2,
                   py: 1.5,
+                  borderRadius: 2,
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   fontSize: '1rem',
                   fontWeight: 600,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   '&:hover': {
                     background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                    transform: 'translateY(-1px)',
+                  },
+                  '&:disabled': {
+                    background: '#cbd5e1',
                   },
                 }}
               >
                 {loading ? 'Signing In...' : 'Sign In'}
               </Button>
-              <Box textAlign="center">
-                <Link to="/register" style={{ textDecoration: 'none' }}>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: '#2563eb',
-                      fontWeight: 500,
-                      '&:hover': {
-                        textDecoration: 'underline',
-                      },
+              <Box textAlign="center" sx={{ mt: 3 }}>
+                <Typography variant="body2" sx={{ color: '#64748b', mb: 1 }}>
+                  Don't have an account?{' '}
+                  <Link
+                    to="/register"
+                    style={{
+                      color: '#667eea',
+                      fontWeight: 600,
+                      textDecoration: 'none',
                     }}
                   >
-                    Don't have an account? Sign Up
-                  </Typography>
+                    Sign Up
+                  </Link>
+                </Typography>
+                <Link
+                  to="/"
+                  style={{
+                    color: '#64748b',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  ← Back to Home
                 </Link>
               </Box>
             </Box>

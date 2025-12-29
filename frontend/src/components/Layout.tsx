@@ -21,7 +21,8 @@ import {
   FitnessCenter as FitnessIcon,
   School as SchoolIcon,
   Person as PersonIcon,
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  People as PeopleIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,6 +50,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
     { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
     { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
+    ...(user?.role === 'ADMIN'
+      ? [{ text: 'User Management', icon: <PeopleIcon />, path: '/users' }]
+      : []),
   ];
 
   const handleDrawerToggle = () => {

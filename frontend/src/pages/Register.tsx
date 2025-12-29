@@ -12,8 +12,19 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Grid
+  Grid,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
+import {
+  ArrowBack as ArrowBackIcon,
+  Person as PersonIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  Lock as LockIcon,
+  Visibility,
+  VisibilityOff
+} from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
 // Import logo - Place logo in public folder as /healthbridge-logo.png
@@ -27,10 +38,11 @@ const Register: React.FC = () => {
     firstName: '',
     lastName: '',
     phone: '',
-    role: 'PATIENT'
+    role: 'PATIENT' // Default to PATIENT, only PATIENT and STUDENT available for public signup
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -84,6 +96,24 @@ const Register: React.FC = () => {
             zIndex: 1,
           }}
         >
+          {/* Back Button */}
+          <IconButton
+            onClick={() => navigate('/')}
+            sx={{
+              position: 'absolute',
+              top: -60,
+              left: 0,
+              color: 'white',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              },
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+
           <Paper
             elevation={24}
             sx={{
@@ -91,6 +121,17 @@ const Register: React.FC = () => {
               width: '100%',
               borderRadius: 4,
               backgroundColor: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '4px',
+                background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+              },
             }}
           >
             <Box sx={{ textAlign: 'center', mb: 4 }}>
@@ -154,10 +195,21 @@ const Register: React.FC = () => {
                     autoFocus
                     value={formData.firstName}
                     onChange={handleChange}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PersonIcon sx={{ color: '#94a3b8' }} />
+                        </InputAdornment>
+                      ),
+                    }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
                         '&:hover fieldset': {
-                          borderColor: '#2563eb',
+                          borderColor: '#667eea',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#667eea',
                         },
                       },
                     }}
@@ -172,10 +224,21 @@ const Register: React.FC = () => {
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PersonIcon sx={{ color: '#94a3b8' }} />
+                        </InputAdornment>
+                      ),
+                    }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
                         '&:hover fieldset': {
-                          borderColor: '#2563eb',
+                          borderColor: '#667eea',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#667eea',
                         },
                       },
                     }}
@@ -192,10 +255,21 @@ const Register: React.FC = () => {
                 autoComplete="email"
                 value={formData.email}
                 onChange={handleChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <EmailIcon sx={{ color: '#94a3b8' }} />
+                    </InputAdornment>
+                  ),
+                }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
                     '&:hover fieldset': {
-                      borderColor: '#2563eb',
+                      borderColor: '#667eea',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#667eea',
                     },
                   },
                 }}
@@ -208,10 +282,21 @@ const Register: React.FC = () => {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PhoneIcon sx={{ color: '#94a3b8' }} />
+                    </InputAdornment>
+                  ),
+                }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
                     '&:hover fieldset': {
-                      borderColor: '#2563eb',
+                      borderColor: '#667eea',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#667eea',
                     },
                   },
                 }}
@@ -222,20 +307,56 @@ const Register: React.FC = () => {
                 fullWidth
                 name="password"
                 label="Password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 id="password"
                 autoComplete="new-password"
                 value={formData.password}
                 onChange={handleChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LockIcon sx={{ color: '#94a3b8' }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        size="small"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
                     '&:hover fieldset': {
-                      borderColor: '#2563eb',
+                      borderColor: '#667eea',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#667eea',
                     },
                   },
                 }}
               />
-              <FormControl fullWidth margin="normal">
+              <FormControl
+                fullWidth
+                margin="normal"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '&:hover fieldset': {
+                      borderColor: '#667eea',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#667eea',
+                    },
+                  },
+                }}
+              >
                 <InputLabel>Role</InputLabel>
                 <Select
                   value={formData.role}
@@ -243,11 +364,20 @@ const Register: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 >
                   <MenuItem value="PATIENT">Patient</MenuItem>
-                  <MenuItem value="HEALTHCARE_PROVIDER">Healthcare Provider</MenuItem>
-                  <MenuItem value="WELLNESS_COACH">Wellness Coach</MenuItem>
                   <MenuItem value="STUDENT">Student</MenuItem>
                 </Select>
               </FormControl>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: '#64748b',
+                  display: 'block',
+                  mt: 1,
+                  fontStyle: 'italic',
+                }}
+              >
+                Healthcare Providers and Wellness Coaches must be added by an administrator
+              </Typography>
               <Button
                 type="submit"
                 fullWidth
@@ -257,30 +387,47 @@ const Register: React.FC = () => {
                   mt: 3,
                   mb: 2,
                   py: 1.5,
+                  borderRadius: 2,
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   fontSize: '1rem',
                   fontWeight: 600,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   '&:hover': {
                     background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                    transform: 'translateY(-1px)',
+                  },
+                  '&:disabled': {
+                    background: '#cbd5e1',
                   },
                 }}
               >
                 {loading ? 'Creating Account...' : 'Sign Up'}
               </Button>
-              <Box textAlign="center">
-                <Link to="/login" style={{ textDecoration: 'none' }}>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: '#2563eb',
-                      fontWeight: 500,
-                      '&:hover': {
-                        textDecoration: 'underline',
-                      },
+              <Box textAlign="center" sx={{ mt: 3 }}>
+                <Typography variant="body2" sx={{ color: '#64748b', mb: 1 }}>
+                  Already have an account?{' '}
+                  <Link
+                    to="/login"
+                    style={{
+                      color: '#667eea',
+                      fontWeight: 600,
+                      textDecoration: 'none',
                     }}
                   >
-                    Already have an account? Sign In
-                  </Typography>
+                    Sign In
+                  </Link>
+                </Typography>
+                <Link
+                  to="/"
+                  style={{
+                    color: '#64748b',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  ← Back to Home
                 </Link>
               </Box>
             </Box>

@@ -119,6 +119,60 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const createUser = async (req: AuthRequest, res: Response) => {
+  try {
+    const { email, password, firstName, lastName, phone, role } = req.body;
+
+    // Validate required fields
+    if (!email || !password || !firstName || !lastName || !role) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        firstName,
+        lastName,
+        phone,
+        role,
+        isActive: true
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        createdAt: true
+      }
+    });
+
+    res.status(201).json({
+      message: 'User created successfully',
+      user
+    });
+  } catch (error: any) {
+    console.error('Create user error:', error);
+    res.status(500).json({ message: 'Failed to create user', error: error.message });
+  }
+};
+
 export const deleteUser = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
