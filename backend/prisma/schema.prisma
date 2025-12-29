@@ -172,6 +172,13 @@ model User {
   triageAssessments        TriageAssessment[]
   payments                 Payment[]
   offlineSyncQueue         OfflineSyncQueue[]
+  
+  // Dashboard Enhancements
+  medicationReminders      MedicationReminder[] @relation("PatientMedications")
+  invoicesAsPatient        BillingInvoice[] @relation("PatientInvoices")
+  invoicesAsProvider        BillingInvoice[] @relation("ProviderInvoices")
+  clinicalTemplates         ClinicalTemplate[] @relation("ProviderTemplates")
+  remoteMonitoringData      RemoteMonitoringData[] @relation("PatientMonitoring")
 
   @@index([email])
   @@index([role])
@@ -677,5 +684,144 @@ model FHIRResource {
   @@index([resourceType])
   @@index([fhirId])
   @@index([lastUpdated])
+}
+
+// ========== DASHBOARD ENHANCEMENTS ==========
+
+enum MedicationFrequency {
+  ONCE_DAILY
+  TWICE_DAILY
+  THREE_TIMES_DAILY
+  FOUR_TIMES_DAILY
+  AS_NEEDED
+  WEEKLY
+  MONTHLY
+}
+
+enum ReminderStatus {
+  ACTIVE
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model MedicationReminder {
+  id              String            @id @default(uuid())
+  patientId       String
+  medicationName  String
+  dosage          String            // e.g., "500mg", "1 tablet"
+  frequency       MedicationFrequency
+  times           String            // JSON array of times ["08:00", "20:00"]
+  startDate       DateTime
+  endDate         DateTime?
+  notes           String?
+  status          ReminderStatus    @default(ACTIVE)
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient         User              @relation("PatientMedications", fields: [patientId], references: [id], onDelete: Cascade)
+  logs            MedicationLog[]
+
+  @@index([patientId])
+  @@index([status])
+  @@index([isActive])
+  @@index([startDate])
+}
+
+model MedicationLog {
+  id              String            @id @default(uuid())
+  reminderId      String
+  scheduledTime   DateTime
+  takenTime       DateTime?
+  status          String            // TAKEN, MISSED, SKIPPED
+  notes           String?
+  createdAt       DateTime          @default(now())
+
+  reminder        MedicationReminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+
+  @@index([reminderId])
+  @@index([scheduledTime])
+  @@index([status])
+}
+
+model ClinicalTemplate {
+  id              String            @id @default(uuid())
+  providerId      String
+  name            String
+  category        String            // GENERAL, CARDIOLOGY, PEDIATRICS, etc.
+  templateData    String            // JSON structure for the template
+  isDefault        Boolean           @default(false)
+  isShared         Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  provider        User              @relation("ProviderTemplates", fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@index([category])
+  @@index([isDefault])
+}
+
+model BillingInvoice {
+  id              String            @id @default(uuid())
+  providerId      String
+  patientId       String
+  appointmentId   String?
+  invoiceNumber   String            @unique
+  items            String            // JSON array of line items
+  subtotal         Float
+  tax              Float             @default(0)
+  discount         Float             @default(0)
+  total            Float
+  currency         String            @default("NAD")
+  status           InvoiceStatus     @default(DRAFT)
+  dueDate          DateTime
+  paidDate         DateTime?
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  provider        User              @relation("ProviderInvoices", fields: [providerId], references: [id], onDelete: Cascade)
+  patient         User              @relation("PatientInvoices", fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@index([patientId])
+  @@index([status])
+  @@index([invoiceNumber])
+  @@index([dueDate])
+}
+
+model RemoteMonitoringData {
+  id              String            @id @default(uuid())
+  patientId       String
+  providerId      String?
+  metricType      String            // BLOOD_PRESSURE, HEART_RATE, GLUCOSE, WEIGHT, etc.
+  value           Float
+  unit            String            // mmHg, bpm, mg/dL, kg, etc.
+  deviceId        String?           // IoT device identifier
+  deviceType      String?           // SMARTWATCH, GLUCOSE_METER, etc.
+  recordedAt      DateTime          @default(now())
+  notes           String?
+  isAlert         Boolean           @default(false)
+  alertLevel      String?           // LOW, NORMAL, HIGH, CRITICAL
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient         User              @relation("PatientMonitoring", fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([providerId])
+  @@index([metricType])
+  @@index([recordedAt])
+  @@index([isAlert])
 }
 

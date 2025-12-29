@@ -20,6 +20,10 @@ import triageRoutes from './routes/triage';
 import medicalAidRoutes from './routes/medicalAid';
 import paymentRoutes from './routes/payments';
 import offlineSyncRoutes from './routes/offlineSync';
+import medicationRoutes from './routes/medications';
+import clinicalTemplateRoutes from './routes/clinicalTemplates';
+import billingRoutes from './routes/billing';
+import monitoringRoutes from './routes/monitoring';
 
 // Load environment variables
 dotenv.config();
@@ -63,6 +67,10 @@ app.use('/api/triage', triageRoutes);
 app.use('/api/medical-aid', medicalAidRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/offline-sync', offlineSyncRoutes);
+app.use('/api/medications', medicationRoutes);
+app.use('/api/clinical-templates', clinicalTemplateRoutes);
+app.use('/api/billing', billingRoutes);
+app.use('/api/monitoring', monitoringRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

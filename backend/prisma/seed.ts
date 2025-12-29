@@ -10,6 +10,37 @@ async function main() {
   console.log('🗑️  Clearing existing data...');
   
   // Delete in order to respect foreign key constraints
+  // New dashboard enhancement models
+  await prisma.medicationLog.deleteMany();
+  await prisma.medicationReminder.deleteMany();
+  await prisma.remoteMonitoringData.deleteMany();
+  await prisma.billingInvoice.deleteMany();
+  await prisma.clinicalTemplate.deleteMany();
+  
+  // Phase 3 models
+  await prisma.offlineSyncQueue.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.medicalAidClaim.deleteMany();
+  await prisma.medicalAidInfo.deleteMany();
+  await prisma.triageAssessment.deleteMany();
+  await prisma.fHIRResource.deleteMany();
+  
+  // Phase 2 models
+  await prisma.researchCollaboration.deleteMany();
+  await prisma.researchMilestone.deleteMany();
+  await prisma.supervisorMatch.deleteMany();
+  await prisma.researchResource.deleteMany();
+  await prisma.researchProposal.deleteMany();
+  await prisma.researchTopic.deleteMany();
+  await prisma.challengeParticipation.deleteMany();
+  await prisma.wellnessChallenge.deleteMany();
+  await prisma.habitEntry.deleteMany();
+  await prisma.habitTracker.deleteMany();
+  await prisma.wellnessPlan.deleteMany();
+  await prisma.patientHistory.deleteMany();
+  await prisma.videoConsultation.deleteMany();
+  
+  // Phase 1 models
   await prisma.assignmentSubmission.deleteMany();
   await prisma.assignment.deleteMany();
   await prisma.consultationNote.deleteMany();

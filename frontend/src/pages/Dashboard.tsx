@@ -20,6 +20,10 @@ import {
 import Layout from '../components/Layout';
 import api from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
+import MedicationReminders from '../components/MedicationReminders';
+import BillingOverview from '../components/BillingOverview';
+import ClinicalTemplates from '../components/ClinicalTemplates';
+import RemoteMonitoring from '../components/RemoteMonitoring';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -145,6 +149,32 @@ const Dashboard: React.FC = () => {
             ))}
           </Grid>
 
+          {/* Role-specific dashboard sections */}
+          {user?.role === 'PATIENT' && (
+            <Grid container spacing={3} sx={{ mt: 2 }}>
+              <Grid item xs={12} lg={6}>
+                <MedicationReminders />
+              </Grid>
+              <Grid item xs={12} lg={6}>
+                <RemoteMonitoring />
+              </Grid>
+            </Grid>
+          )}
+
+          {user?.role === 'HEALTHCARE_PROVIDER' && (
+            <Grid container spacing={3} sx={{ mt: 2 }}>
+              <Grid item xs={12}>
+                <BillingOverview />
+              </Grid>
+              <Grid item xs={12}>
+                <ClinicalTemplates />
+              </Grid>
+              <Grid item xs={12}>
+                <RemoteMonitoring />
+              </Grid>
+            </Grid>
+          )}
+
           <Box sx={{ mt: 4 }}>
             <Typography
               variant="h5"
@@ -180,8 +210,8 @@ const Dashboard: React.FC = () => {
                               mr: 2,
                             }}
                           >
-                            {appointment.provider.firstName?.[0]}
-                            {appointment.provider.lastName?.[0]}
+                            {appointment.provider?.firstName?.[0]}
+                            {appointment.provider?.lastName?.[0]}
                           </Avatar>
                           <Box>
                             <Typography
@@ -192,7 +222,10 @@ const Dashboard: React.FC = () => {
                                 mb: 0.5,
                               }}
                             >
-                              Dr. {appointment.provider.firstName} {appointment.provider.lastName}
+                              {user?.role === 'PATIENT' 
+                                ? `Dr. ${appointment.provider?.firstName} ${appointment.provider?.lastName}`
+                                : `${appointment.patient?.firstName} ${appointment.patient?.lastName}`
+                              }
                             </Typography>
                             <Typography
                               variant="body2"
