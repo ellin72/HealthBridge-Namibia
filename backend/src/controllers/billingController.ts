@@ -14,14 +14,34 @@ export const getInvoices = async (req: AuthRequest, res: Response) => {
     const where: any = {};
     
     if (userRole === 'PATIENT') {
+      // Patients can only see their own invoices
       where.patientId = userId;
     } else if (userRole === 'HEALTHCARE_PROVIDER') {
+      // Providers can only see invoices for patients who have chosen them
       where.providerId = userId;
+      if (patientId) {
+        // Verify the provider has a relationship with this patient
+        const hasRelationship = await prisma.appointment.findFirst({
+          where: {
+            providerId: userId,
+            patientId: patientId as string
+          }
+        });
+        if (!hasRelationship) {
+          return res.status(403).json({ message: 'Access denied. You can only view invoices for your patients.' });
+        }
+        where.patientId = patientId;
+      }
+    } else {
+      // All other roles cannot see invoices
+      where.patientId = '00000000-0000-0000-0000-000000000000';
     }
     
     if (status) where.status = status;
-    if (patientId) where.patientId = patientId;
-    if (providerId) where.providerId = providerId;
+    if (providerId && userRole === 'PATIENT') {
+      // Patients can filter by provider
+      where.providerId = providerId;
+    }
 
     const invoices = await prisma.billingInvoice.findMany({
       where,
@@ -52,10 +72,27 @@ export const getInvoices = async (req: AuthRequest, res: Response) => {
 export const createInvoice = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
+    const userRole = req.user!.role;
     const { patientId, appointmentId, items, tax, discount, dueDate, notes } = req.body;
+
+    // Only providers can create invoices
+    if (userRole !== 'HEALTHCARE_PROVIDER') {
+      return res.status(403).json({ message: 'Only healthcare providers can create invoices' });
+    }
 
     if (!patientId || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Verify the provider has a relationship with this patient
+    const hasRelationship = await prisma.appointment.findFirst({
+      where: {
+        providerId: userId,
+        patientId: patientId
+      }
+    });
+    if (!hasRelationship) {
+      return res.status(403).json({ message: 'Access denied. You can only create invoices for your patients.' });
     }
 
     // Calculate totals

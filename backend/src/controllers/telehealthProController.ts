@@ -83,9 +83,16 @@ export const getVideoConsultation = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    // Check access permissions
-    if (userRole !== 'ADMIN' && appointment.patientId !== userId && appointment.providerId !== userId) {
-      return res.status(403).json({ message: 'Access denied' });
+    // Check access permissions - only patient and provider can access
+    const normalizedUserId = String(userId).trim();
+    const normalizedPatientId = String(appointment.patientId).trim();
+    const normalizedProviderId = String(appointment.providerId).trim();
+    
+    const isPatient = normalizedPatientId === normalizedUserId;
+    const isProvider = normalizedProviderId === normalizedUserId;
+
+    if (!isPatient && !isProvider) {
+      return res.status(403).json({ message: 'Access denied. You can only view video consultations for your own appointments or appointments assigned to you.' });
     }
 
     const videoConsultation = await prisma.videoConsultation.findUnique({
@@ -140,9 +147,12 @@ export const updateVideoConsultation = async (req: AuthRequest, res: Response) =
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    // Only provider or admin can update
-    if (userRole !== 'ADMIN' && appointment.providerId !== userId) {
-      return res.status(403).json({ message: 'Access denied' });
+    // Only provider assigned to the appointment can update
+    const normalizedUserId = String(userId).trim();
+    const normalizedProviderId = String(appointment.providerId).trim();
+    
+    if (normalizedProviderId !== normalizedUserId) {
+      return res.status(403).json({ message: 'Access denied. You can only update video consultations for appointments assigned to you.' });
     }
 
     const updateData: any = {};
@@ -175,9 +185,26 @@ export const createPatientHistory = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Patient ID is required' });
     }
 
-    // Only providers, admins, or the patient themselves can create history
-    if (userRole !== 'ADMIN' && userRole !== 'HEALTHCARE_PROVIDER' && patientId !== userId) {
-      return res.status(403).json({ message: 'Access denied' });
+    // Only providers with relationship to patient, or the patient themselves can create history
+    const normalizedUserId = String(userId).trim();
+    const normalizedPatientId = String(patientId).trim();
+    
+    const isPatient = normalizedPatientId === normalizedUserId;
+    
+    // Check if provider has relationship with patient
+    let isProvider = false;
+    if (userRole === 'HEALTHCARE_PROVIDER') {
+      const hasRelationship = await prisma.appointment.findFirst({
+        where: {
+          providerId: userId,
+          patientId: patientId
+        }
+      });
+      isProvider = !!hasRelationship;
+    }
+
+    if (!isPatient && !isProvider) {
+      return res.status(403).json({ message: 'Access denied. You can only create patient history for your own records or for patients assigned to you.' });
     }
 
     const history = await prisma.patientHistory.create({
@@ -216,9 +243,26 @@ export const getPatientHistory = async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
     const userRole = req.user!.role;
 
-    // Check access permissions
-    if (userRole !== 'ADMIN' && userRole !== 'HEALTHCARE_PROVIDER' && patientId !== userId) {
-      return res.status(403).json({ message: 'Access denied' });
+    // Check access permissions - only patient and their provider can access
+    const normalizedUserId = String(userId).trim();
+    const normalizedPatientId = String(patientId).trim();
+    
+    const isPatient = normalizedPatientId === normalizedUserId;
+    
+    // Check if provider has relationship with patient
+    let isProvider = false;
+    if (userRole === 'HEALTHCARE_PROVIDER') {
+      const hasRelationship = await prisma.appointment.findFirst({
+        where: {
+          providerId: userId,
+          patientId: patientId
+        }
+      });
+      isProvider = !!hasRelationship;
+    }
+
+    if (!isPatient && !isProvider) {
+      return res.status(403).json({ message: 'Access denied. You can only view patient history for your own records or for patients assigned to you.' });
     }
 
     const histories = await prisma.patientHistory.findMany({
@@ -268,9 +312,26 @@ export const updatePatientHistory = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Patient history not found' });
     }
 
-    // Check permissions
-    if (userRole !== 'ADMIN' && userRole !== 'HEALTHCARE_PROVIDER' && history.patientId !== userId) {
-      return res.status(403).json({ message: 'Access denied' });
+    // Check permissions - only patient and their provider can update
+    const normalizedUserId = String(userId).trim();
+    const normalizedPatientId = String(history.patientId).trim();
+    
+    const isPatient = normalizedPatientId === normalizedUserId;
+    
+    // Check if provider has relationship with patient
+    let isProvider = false;
+    if (userRole === 'HEALTHCARE_PROVIDER') {
+      const hasRelationship = await prisma.appointment.findFirst({
+        where: {
+          providerId: userId,
+          patientId: history.patientId
+        }
+      });
+      isProvider = !!hasRelationship;
+    }
+
+    if (!isPatient && !isProvider) {
+      return res.status(403).json({ message: 'Access denied. You can only update patient history for your own records or for patients assigned to you.' });
     }
 
     const updateData: any = {};
@@ -301,15 +362,14 @@ export const getProviderAnalytics = async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
     const userRole = req.user!.role;
 
-    // Only providers and admins can access analytics
-    if (userRole !== 'HEALTHCARE_PROVIDER' && userRole !== 'ADMIN') {
-      return res.status(403).json({ message: 'Access denied' });
+    // Only providers can access analytics
+    if (userRole !== 'HEALTHCARE_PROVIDER') {
+      return res.status(403).json({ message: 'Access denied. Only healthcare providers can access analytics.' });
     }
 
-    const where: any = {};
-    if (userRole === 'HEALTHCARE_PROVIDER') {
-      where.providerId = userId;
-    }
+    const where: any = {
+      providerId: userId
+    };
 
     if (startDate || endDate) {
       where.appointmentDate = {};

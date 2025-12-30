@@ -168,9 +168,16 @@ export const getConsultationNoteById = async (req: AuthRequest, res: Response) =
       return res.status(404).json({ message: 'Consultation note not found' });
     }
 
-    // Check access permissions
-    if (userRole !== 'ADMIN' && consultationNote.patientId !== userId && consultationNote.providerId !== userId) {
-      return res.status(403).json({ message: 'Access denied' });
+    // Check access permissions - only patient and provider can access
+    const normalizedUserId = String(userId).trim();
+    const normalizedPatientId = String(consultationNote.patientId).trim();
+    const normalizedProviderId = String(consultationNote.providerId).trim();
+    
+    const isPatient = normalizedPatientId === normalizedUserId;
+    const isProvider = normalizedProviderId === normalizedUserId;
+
+    if (!isPatient && !isProvider) {
+      return res.status(403).json({ message: 'Access denied. You can only view consultation notes for your own appointments or appointments assigned to you.' });
     }
 
     res.json(consultationNote);
@@ -195,9 +202,12 @@ export const updateConsultationNote = async (req: AuthRequest, res: Response) =>
       return res.status(404).json({ message: 'Consultation note not found' });
     }
 
-    // Only the provider who created it or admin can update
-    if (userRole !== 'ADMIN' && consultationNote.providerId !== providerId) {
-      return res.status(403).json({ message: 'Access denied' });
+    // Only the provider who created it can update
+    const normalizedProviderId = String(providerId).trim();
+    const normalizedNoteProviderId = String(consultationNote.providerId).trim();
+    
+    if (normalizedNoteProviderId !== normalizedProviderId) {
+      return res.status(403).json({ message: 'Access denied. You can only update consultation notes you created.' });
     }
 
     const updateData: any = {};

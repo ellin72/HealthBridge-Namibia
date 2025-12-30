@@ -75,6 +75,8 @@ const ResearchSupport: React.FC = () => {
   const [milestoneDialogOpen, setMilestoneDialogOpen] = useState(false);
   const [collaborationDialogOpen, setCollaborationDialogOpen] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<any>(null);
+  const [topicField, setTopicField] = useState('');
+  const [supervisorField, setSupervisorField] = useState('');
 
   const { data: topics } = useQuery(
     'research-topics',
@@ -156,10 +158,11 @@ const ResearchSupport: React.FC = () => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     generateTopicMutation.mutate({
-      field: formData.get('field'),
+      field: topicField,
       keywords: (formData.get('keywords') as string)?.split(',').map(k => k.trim()),
       description: formData.get('description') || null
     });
+    setTopicField('');
   };
 
   const handleCreateProposal = (e: React.FormEvent<HTMLFormElement>) => {
@@ -180,9 +183,10 @@ const ResearchSupport: React.FC = () => {
     const formData = new FormData(e.currentTarget);
     requestSupervisorMutation.mutate({
       supervisorId: formData.get('supervisorId'),
-      field: formData.get('field'),
+      field: supervisorField,
       requestMessage: formData.get('requestMessage') || null
     });
+    setSupervisorField('');
   };
 
   const handleCreateMilestone = (e: React.FormEvent<HTMLFormElement>) => {
@@ -541,13 +545,21 @@ const ResearchSupport: React.FC = () => {
       </Box>
 
       {/* Generate Topic Dialog */}
-      <Dialog open={topicDialogOpen} onClose={() => setTopicDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={topicDialogOpen} onClose={() => {
+        setTopicDialogOpen(false);
+        setTopicField('');
+      }} maxWidth="sm" fullWidth>
         <form onSubmit={handleGenerateTopic}>
           <DialogTitle>Generate Research Topic</DialogTitle>
           <DialogContent>
             <FormControl fullWidth sx={{ mb: 2, mt: 2 }}>
               <InputLabel>Research Field</InputLabel>
-              <Select name="field" required>
+              <Select 
+                name="field" 
+                value={topicField}
+                onChange={(e) => setTopicField(e.target.value)}
+                required
+              >
                 <MenuItem value="HEALTH">Health</MenuItem>
                 <MenuItem value="EDUCATION">Education</MenuItem>
                 <MenuItem value="TECHNOLOGY">Technology</MenuItem>
@@ -640,7 +652,10 @@ const ResearchSupport: React.FC = () => {
       </Dialog>
 
       {/* Request Supervisor Dialog */}
-      <Dialog open={supervisorDialogOpen} onClose={() => setSupervisorDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={supervisorDialogOpen} onClose={() => {
+        setSupervisorDialogOpen(false);
+        setSupervisorField('');
+      }} maxWidth="sm" fullWidth>
         <form onSubmit={handleRequestSupervisor}>
           <DialogTitle>Request Supervisor</DialogTitle>
           <DialogContent>
@@ -653,7 +668,12 @@ const ResearchSupport: React.FC = () => {
             />
             <FormControl fullWidth sx={{ mb: 2 }}>
               <InputLabel>Field</InputLabel>
-              <Select name="field" required>
+              <Select 
+                name="field" 
+                value={supervisorField}
+                onChange={(e) => setSupervisorField(e.target.value)}
+                required
+              >
                 <MenuItem value="HEALTH">Health</MenuItem>
                 <MenuItem value="EDUCATION">Education</MenuItem>
                 <MenuItem value="TECHNOLOGY">Technology</MenuItem>

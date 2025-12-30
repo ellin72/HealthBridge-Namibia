@@ -4,10 +4,14 @@ A comprehensive digital healthcare platform integrating telehealth, wellness res
 
 ## Project Overview
 
-HealthBridge Namibia is a mobile and web platform designed to provide:
-- **Telehealth Services**: Appointment booking and consultation notes
-- **Wellness Hub**: Nutrition guides, fitness routines, and stress management tips
-- **Learning Zone**: Educational resources and assignment submissions for healthcare students
+HealthBridge Namibia is a comprehensive digital healthcare platform designed to provide:
+- **Telehealth Services**: Appointment booking, consultation notes, and video consultations
+- **Wellness Hub**: Nutrition guides, fitness routines, stress management tips, and interactive wellness tools
+- **Learning Zone**: Educational resources, assignment submissions, and research support for healthcare students
+- **AI-Powered Triage**: Intelligent symptom checker for urgency assessment
+- **Medical Aid Integration**: Support for Namibian medical aid schemes
+- **Multilingual Support**: English, Afrikaans, and Oshiwambo
+- **Offline Capabilities**: Works offline with automatic sync
 
 ## Tech Stack
 
@@ -36,15 +40,14 @@ HealthBridge-Namibia/
 ├── backend/          # Node.js/Express API
 ├── frontend/         # React web application
 ├── mobile/           # React Native mobile app
-├── docs/             # Comprehensive documentation
-└── phase1.md         # Project charter
+└── docs/             # Comprehensive documentation
 ```
 
 ## Getting Started
 
-**📖 For complete setup instructions, see [STARTUP_GUIDE.md](./STARTUP_GUIDE.md)**
+**📖 For complete setup instructions, see [docs/SETUP_GUIDE.md](./docs/SETUP_GUIDE.md)**
 
-The startup guide includes:
+The setup guide includes:
 - Detailed prerequisites and installation steps
 - Database setup (Docker and local PostgreSQL)
 - Backend, frontend, and mobile configuration
@@ -63,36 +66,118 @@ The startup guide includes:
 
 ## User Roles
 
-1. **Patients**: Book appointments, access wellness content
-2. **Healthcare Providers**: Manage appointments, create consultation notes
-3. **Wellness Coaches**: Manage wellness content
-4. **Students**: Access learning resources, submit assignments
+1. **Patients**: 
+   - Book appointments, access wellness content
+   - Use symptom checker for triage
+   - Track wellness habits and join challenges
+   - Access medical aid information and claims
+   - View comprehensive medical history
+
+2. **Healthcare Providers**: 
+   - Manage appointments and create consultation notes
+   - Conduct video consultations
+   - Access patient medical history
+   - View provider analytics
+   - Create assignments for students
+   - Grade student assignments
+
+3. **Wellness Coaches**: 
+   - Create and manage wellness content
+   - Create wellness challenges
+   - Monitor community engagement
+
+4. **Students**: 
+   - Access learning resources and submit assignments
+   - Use research support tools (topic generator, proposal builder)
+   - Connect with supervisors
+   - Track research milestones
+   - Collaborate on research projects
+
+5. **Admin**: 
+   - User management
+   - System administration
 
 ## Features
 
-### Telehealth Lite
+### Phase 1 - Core Features
+
+#### Telehealth Lite
 - Appointment booking system
 - Consultation notes management
 - Provider availability management
 
-### Wellness Hub
+#### Wellness Hub
 - Nutrition guides and meal plans
 - Fitness routines and exercise videos
 - Stress management tips and resources
+- Content creation and management by wellness coaches
 
-### Learning Zone
+#### Learning Zone
 - PDF resource uploads
 - Assignment submission system
 - Educational content management
+- Assignment grading for instructors
+
+### Phase 2 - Advanced Features
+
+#### Telehealth Pro
+- Video consultations with Zoom/Google Meet integration
+- Comprehensive patient medical history tracking
+- Provider analytics dashboard with appointment statistics
+
+#### Interactive Wellness Tools
+- Personalized wellness plans with custom goals
+- Habit tracking (nutrition, fitness, sleep, meditation, hydration)
+- Community wellness challenges with progress tracking
+
+#### Research Support (Students)
+- AI-powered research topic generator
+- Research proposal builder
+- Curated resource library (articles, journals, datasets)
+- Supervisor matching and connection
+- Research milestone tracking
+- Collaboration tools (shared folders, notes, chat)
+
+### Additional Features
+
+#### AI-Powered Symptom Checker
+- Intelligent symptom assessment
+- Urgency level determination (LOW, MEDIUM, HIGH, URGENT, EMERGENCY)
+- AI recommendations with confidence scores
+- Triage history tracking
+
+#### Multilingual Support
+- English, Afrikaans, and Oshiwambo language support
+- User language preference storage
+- Seamless language switching
+
+#### Namibian Medical Aid Integration
+- Support for NAMMED, Medical Aid Fund, and Prosana
+- Medical aid information storage and verification
+- Claim submission and tracking system
+
+#### Payment Gateway Integration
+- PayToday and SnapScan support (popular in Namibia)
+- Credit card payment processing
+- Transaction history and tracking
+
+#### Offline-First Capabilities
+- Service worker for offline caching
+- Local storage queue for offline actions
+- Automatic sync when connection is restored
+
+#### Enhanced Security & Compliance
+- AES-256-GCM encryption for sensitive data
+- POPIA/HIPAA compliance structure
+- FHIR interoperability for healthcare system integration
 
 ## Documentation
 
-- **[STARTUP_GUIDE.md](./STARTUP_GUIDE.md)** - Complete setup and configuration guide ⭐ **Start here!**
-- **[INSTALLATION_GUIDE.md](./INSTALLATION_GUIDE.md)** - Detailed prerequisite installation (Windows)
-- **docs/API_DOCUMENTATION.md** - API endpoints and usage
-- **docs/DATABASE_SCHEMA.md** - Database structure and relationships
-- **docs/DEPLOYMENT_GUIDE.md** - Production deployment instructions
-- **docs/USER_GUIDE.md** - User-facing feature documentation
+- **[docs/SETUP_GUIDE.md](./docs/SETUP_GUIDE.md)** - Complete setup and configuration guide ⭐ **Start here!**
+- **[docs/API_DOCUMENTATION.md](./docs/API_DOCUMENTATION.md)** - API endpoints and usage
+- **[docs/DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md)** - Database structure and relationships
+- **[docs/USER_GUIDE.md](./docs/USER_GUIDE.md)** - User-facing feature documentation
+- **[docs/README.md](./docs/README.md)** - Documentation index
 
 ## License
 

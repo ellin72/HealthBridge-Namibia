@@ -37,45 +37,64 @@ const Landing: React.FC = () => {
 
   const services = [
     {
-      title: 'Healthcare Appointments',
-      description: 'Book and manage appointments with qualified healthcare providers',
+      title: 'Telehealth Services',
+      description: 'Book appointments, video consultations, and access your medical history',
       icon: <CalendarIcon sx={{ fontSize: 48 }} />,
       color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     },
     {
-      title: 'Wellness Hub',
-      description: 'Access wellness content, nutrition tips, and fitness resources',
-      icon: <FitnessIcon sx={{ fontSize: 48 }} />,
+      title: 'AI Symptom Checker',
+      description: 'AI-powered triage system to assess symptoms and urgency levels',
+      icon: <HealthIcon sx={{ fontSize: 48 }} />,
       color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
     },
     {
-      title: 'Learning Zone',
-      description: 'Educational resources and assignments for healthcare students',
-      icon: <SchoolIcon sx={{ fontSize: 48 }} />,
+      title: 'Wellness Hub & Tools',
+      description: 'Wellness content, personalized plans, habit tracking, and community challenges',
+      icon: <FitnessIcon sx={{ fontSize: 48 }} />,
       color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
     },
     {
-      title: 'Consultation Notes',
-      description: 'Secure access to your medical consultation records',
-      icon: <HealthIcon sx={{ fontSize: 48 }} />,
+      title: 'Learning & Research',
+      description: 'Educational resources, assignments, and research support tools for students',
+      icon: <SchoolIcon sx={{ fontSize: 48 }} />,
       color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
     }
   ];
 
   const features = [
-    'Secure and confidential patient data management',
-    'Easy appointment scheduling and management',
-    'Access to qualified healthcare professionals',
-    'Wellness and health education resources',
-    'Student learning and assignment management',
-    'Real-time consultation notes and records'
+    'Secure and confidential patient data management with encryption',
+    'AI-powered symptom checker for intelligent triage',
+    'Video consultations with Telehealth Pro',
+    'Interactive wellness tools with habit tracking and challenges',
+    'Research support tools for healthcare students',
+    'Multilingual support (English, Afrikaans, Oshiwambo)',
+    'Namibian medical aid integration (NAMMED, Medical Aid Fund, Prosana)',
+    'Offline-first capabilities with automatic sync',
+    'Payment gateway integration (PayToday, SnapScan)'
   ];
 
   const documentation = [
-    { title: 'User Guide', description: 'Learn how to use HealthBridge Namibia', link: '#' },
-    { title: 'Privacy Policy', description: 'How we protect your data', link: '#' },
-    { title: 'Terms of Service', description: 'Terms and conditions of use', link: '#' },
-    { title: 'API Documentation', description: 'Technical documentation for developers', link: '#' }
+    { 
+      title: 'User Guide', 
+      description: 'Complete guide covering all features: Telehealth, Wellness Tools, Symptom Checker, Research Support, and more', 
+      link: '/docs/user-guide' 
+    },
+    { 
+      title: 'Privacy Policy', 
+      description: 'How we protect your data with encryption, POPIA/HIPAA compliance, and secure medical records', 
+      link: '/docs/privacy-policy' 
+    },
+    { 
+      title: 'Terms of Service', 
+      description: 'Terms and conditions for using HealthBridge Namibia platform and services', 
+      link: '/docs/terms-of-service' 
+    },
+    { 
+      title: 'API Documentation', 
+      description: 'Complete API reference for developers: endpoints, authentication, and integration guides', 
+      link: '/docs/api' 
+    }
   ];
 
   return (
@@ -288,9 +307,11 @@ const Landing: React.FC = () => {
               lineHeight: 1.8,
             }}
           >
-            HealthBridge Namibia is a comprehensive healthcare platform designed to improve access
-            to healthcare services, wellness resources, and educational opportunities across
-            Namibia. We connect patients, healthcare providers, wellness coaches, and students in
+            HealthBridge Namibia is a comprehensive digital healthcare platform designed to improve access
+            to healthcare services, wellness resources, and educational opportunities across Namibia. 
+            We offer AI-powered symptom checking, video consultations, interactive wellness tools, 
+            research support for students, medical aid integration, multilingual support, and offline 
+            capabilities. We connect patients, healthcare providers, wellness coaches, and students in
             a unified digital ecosystem.
           </Typography>
         </Box>
@@ -530,9 +551,10 @@ const Landing: React.FC = () => {
             >
               Important Documentation
             </Typography>
-            <Typography variant="h6" sx={{ color: '#64748b', maxWidth: '600px', mx: 'auto' }}>
-              Access essential information, guides, and resources to help you get the most out of
-              HealthBridge Namibia
+            <Typography variant="h6" sx={{ color: '#64748b', maxWidth: '700px', mx: 'auto' }}>
+              Access comprehensive documentation covering all features including Telehealth Pro, Wellness Tools, 
+              Symptom Checker, Research Support, Medical Aid integration, and more. Everything you need to 
+              maximize your HealthBridge Namibia experience.
             </Typography>
           </Box>
 
@@ -549,8 +571,7 @@ const Landing: React.FC = () => {
               return (
                 <Grid item xs={12} sm={6} md={3} key={index}>
                   <Card
-                    component={Link}
-                    to={doc.link}
+                    onClick={() => navigate(doc.link)}
                     sx={{
                       height: '100%',
                       border: 'none',
@@ -560,6 +581,7 @@ const Landing: React.FC = () => {
                       transition: 'all 0.3s ease-in-out',
                       boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
                       position: 'relative',
+                      cursor: 'pointer',
                       '&:hover': {
                         transform: 'translateY(-8px)',
                         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
@@ -801,7 +823,7 @@ const Landing: React.FC = () => {
       >
         <Container maxWidth="lg">
           <Grid container spacing={4}>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                 <Box
                   component="img"
@@ -824,7 +846,7 @@ const Landing: React.FC = () => {
                 Bridging healthcare across Namibia through innovative digital solutions.
               </Typography>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={3}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
                 Quick Links
               </Typography>
@@ -840,7 +862,26 @@ const Landing: React.FC = () => {
                 </Link>
               </Box>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Documentation
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Link to="/docs/user-guide" style={{ color: '#94a3b8', textDecoration: 'none' }}>
+                  User Guide
+                </Link>
+                <Link to="/docs/privacy-policy" style={{ color: '#94a3b8', textDecoration: 'none' }}>
+                  Privacy Policy
+                </Link>
+                <Link to="/docs/terms-of-service" style={{ color: '#94a3b8', textDecoration: 'none' }}>
+                  Terms of Service
+                </Link>
+                <Link to="/docs/api" style={{ color: '#94a3b8', textDecoration: 'none' }}>
+                  API Documentation
+                </Link>
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
                 Contact
               </Typography>

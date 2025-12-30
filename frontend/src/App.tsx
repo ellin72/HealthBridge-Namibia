@@ -16,6 +16,12 @@ import ResearchSupport from './pages/ResearchSupport';
 import Profile from './pages/Profile';
 import UserManagement from './pages/UserManagement';
 import SymptomChecker from './pages/SymptomChecker';
+import Billing from './pages/Billing';
+import ClinicalTemplates from './pages/ClinicalTemplates';
+import UserGuide from './pages/UserGuide';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import APIDocumentation from './pages/APIDocumentation';
 
 const theme = createTheme({
   palette: {
@@ -259,6 +265,34 @@ function App() {
                 </PrivateRoute>
               }
             />
+            <Route
+              path="/billing"
+              element={
+                <PrivateRoute>
+                  <Billing />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/clinical-templates"
+              element={
+                <PrivateRoute>
+                  <ClinicalTemplates />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/clinical-templates/:id"
+              element={
+                <PrivateRoute>
+                  <ClinicalTemplates />
+                </PrivateRoute>
+              }
+            />
+            <Route path="/docs/user-guide" element={<UserGuide />} />
+            <Route path="/docs/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/docs/terms-of-service" element={<TermsOfService />} />
+            <Route path="/docs/api" element={<APIDocumentation />} />
           </Routes>
         </Router>
       </AuthProvider>

@@ -67,10 +67,20 @@ export const getAppointments = async (req: AuthRequest, res: Response) => {
 
     const where: any = {};
 
+    // Appointments are only visible to:
+    // 1. The patient who created the appointment
+    // 2. The provider assigned to the appointment
+    // All other users (including admins) cannot see appointments
     if (userRole === 'PATIENT') {
+      // Patients can only see appointments they created
       where.patientId = userId;
     } else if (userRole === 'HEALTHCARE_PROVIDER') {
+      // Providers can only see appointments assigned to them
       where.providerId = userId;
+    } else {
+      // For any other role (ADMIN, STUDENT, WELLNESS_COACH, etc.), return empty result
+      // by setting an impossible condition that will never match
+      where.id = '00000000-0000-0000-0000-000000000000';
     }
 
     if (status) {
@@ -103,6 +113,14 @@ export const getAppointments = async (req: AuthRequest, res: Response) => {
             email: true,
             phone: true
           }
+        },
+        consultationNotes: {
+          select: {
+            id: true,
+            createdAt: true
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1
         }
       },
       orderBy: { appointmentDate: 'desc' }
@@ -150,9 +168,17 @@ export const getAppointmentById = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    // Check access permissions
-    if (userRole !== 'ADMIN' && appointment.patientId !== userId && appointment.providerId !== userId) {
-      return res.status(403).json({ message: 'Access denied' });
+    // Check access permissions - only patient and provider can access
+    // Appointments are only visible to the patient who created it and the provider assigned to it
+    const normalizedUserId = String(userId).trim();
+    const normalizedPatientId = String(appointment.patientId).trim();
+    const normalizedProviderId = String(appointment.providerId).trim();
+    
+    const isPatient = normalizedPatientId === normalizedUserId;
+    const isProvider = normalizedProviderId === normalizedUserId;
+
+    if (!isPatient && !isProvider) {
+      return res.status(403).json({ message: 'Access denied. You can only view your own appointments or appointments assigned to you.' });
     }
 
     res.json(appointment);
@@ -169,6 +195,13 @@ export const updateAppointment = async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
     const userRole = req.user!.role;
 
+    console.log('Update appointment request:', {
+      appointmentId: id,
+      userId,
+      userRole,
+      body: req.body
+    });
+
     const appointment = await prisma.appointment.findUnique({
       where: { id }
     });
@@ -177,20 +210,81 @@ export const updateAppointment = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    // Check permissions
-    if (userRole !== 'ADMIN' && appointment.patientId !== userId && appointment.providerId !== userId) {
-      return res.status(403).json({ message: 'Access denied' });
+    console.log('Appointment found:', {
+      patientId: appointment.patientId,
+      providerId: appointment.providerId,
+      status: appointment.status
+    });
+
+    // Check permissions - only patient and provider can update
+    // Normalize IDs to strings and trim any whitespace
+    const normalizedUserId = String(userId).trim();
+    const normalizedPatientId = String(appointment.patientId).trim();
+    const normalizedProviderId = String(appointment.providerId).trim();
+    
+    const isPatient = normalizedPatientId === normalizedUserId;
+    const isProvider = normalizedProviderId === normalizedUserId;
+
+    console.log('Permission check:', {
+      isPatient,
+      isProvider,
+      userId: normalizedUserId,
+      patientId: normalizedPatientId,
+      providerId: normalizedProviderId,
+      patientIdMatch: normalizedPatientId === normalizedUserId,
+      providerIdMatch: normalizedProviderId === normalizedUserId,
+      userIdType: typeof userId,
+      patientIdType: typeof appointment.patientId,
+      providerIdType: typeof appointment.providerId
+    });
+
+    if (!isPatient && !isProvider) {
+      console.error('Access denied - permission check failed:', {
+        userRole,
+        normalizedUserId,
+        normalizedPatientId,
+        normalizedProviderId,
+        isPatient,
+        isProvider
+      });
+      return res.status(403).json({ 
+        message: 'Access denied. You can only update your own appointments or appointments assigned to you.',
+        details: {
+          userRole,
+          appointmentPatientId: appointment.patientId,
+          appointmentProviderId: appointment.providerId,
+          userId
+        }
+      });
     }
 
-    // Only providers and admins can change status
-    if (status && userRole !== 'HEALTHCARE_PROVIDER' && userRole !== 'ADMIN') {
-      return res.status(403).json({ message: 'Only providers can change appointment status' });
+    // Only providers can change status, except patients can cancel their own appointments
+    if (status && userRole !== 'HEALTHCARE_PROVIDER') {
+      if (status === 'CANCELLED' && normalizedPatientId === normalizedUserId) {
+        // Patients can cancel their own appointments
+        console.log('Patient canceling own appointment - allowed');
+      } else {
+        console.log('Status change denied:', {
+          status,
+          userRole,
+          isPatient,
+          isProvider
+        });
+        return res.status(403).json({ message: 'Only providers can change appointment status' });
+      }
     }
 
     const updateData: any = {};
     if (appointmentDate) updateData.appointmentDate = new Date(appointmentDate);
     if (status) updateData.status = status as AppointmentStatus;
     if (notes !== undefined) updateData.notes = notes;
+
+    // Ensure at least one field is being updated
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+
+    console.log('Updating appointment with data:', updateData);
 
     const updatedAppointment = await prisma.appointment.update({
       where: { id },
@@ -236,9 +330,12 @@ export const deleteAppointment = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    // Only patients can cancel their own appointments, or admins
-    if (userRole !== 'ADMIN' && appointment.patientId !== userId) {
-      return res.status(403).json({ message: 'Access denied' });
+    // Only patients can delete their own appointments
+    const normalizedUserId = String(userId).trim();
+    const normalizedPatientId = String(appointment.patientId).trim();
+    
+    if (normalizedPatientId !== normalizedUserId) {
+      return res.status(403).json({ message: 'Access denied. You can only delete your own appointments.' });
     }
 
     await prisma.appointment.delete({

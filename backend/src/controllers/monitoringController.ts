@@ -14,13 +14,40 @@ export const getMonitoringData = async (req: AuthRequest, res: Response) => {
     const where: any = {};
     
     if (userRole === 'PATIENT') {
+      // Patients can only see their own monitoring data
       where.patientId = userId;
     } else if (userRole === 'HEALTHCARE_PROVIDER') {
+      // Providers can only see monitoring data for patients who have chosen them
       if (patientId) {
+        // Verify the provider has a relationship with this patient
+        const hasRelationship = await prisma.appointment.findFirst({
+          where: {
+            providerId: userId,
+            patientId: patientId as string
+          }
+        });
+        if (!hasRelationship) {
+          return res.status(403).json({ message: 'Access denied. You can only view monitoring data for your patients.' });
+        }
         where.patientId = patientId;
       } else {
-        where.providerId = userId;
+        // Get all patients who have appointments with this provider
+        const appointments = await prisma.appointment.findMany({
+          where: { providerId: userId },
+          select: { patientId: true },
+          distinct: ['patientId']
+        });
+        const patientIds = appointments.map(a => a.patientId);
+        if (patientIds.length === 0) {
+          // No patients, return empty result
+          where.patientId = '00000000-0000-0000-0000-000000000000';
+        } else {
+          where.patientId = { in: patientIds };
+        }
       }
+    } else {
+      // All other roles cannot see monitoring data
+      where.patientId = '00000000-0000-0000-0000-000000000000';
     }
     
     if (metricType) where.metricType = metricType;
@@ -92,9 +119,39 @@ export const getMonitoringStats = async (req: AuthRequest, res: Response) => {
     const where: any = {};
     
     if (userRole === 'PATIENT') {
+      // Patients can only see their own stats
       where.patientId = userId;
-    } else if (patientId) {
-      where.patientId = patientId;
+    } else if (userRole === 'HEALTHCARE_PROVIDER') {
+      // Providers can only see stats for patients who have chosen them
+      if (patientId) {
+        // Verify the provider has a relationship with this patient
+        const hasRelationship = await prisma.appointment.findFirst({
+          where: {
+            providerId: userId,
+            patientId: patientId as string
+          }
+        });
+        if (!hasRelationship) {
+          return res.status(403).json({ message: 'Access denied. You can only view statistics for your patients.' });
+        }
+        where.patientId = patientId;
+      } else {
+        // Get all patients who have appointments with this provider
+        const appointments = await prisma.appointment.findMany({
+          where: { providerId: userId },
+          select: { patientId: true },
+          distinct: ['patientId']
+        });
+        const patientIds = appointments.map(a => a.patientId);
+        if (patientIds.length === 0) {
+          where.patientId = '00000000-0000-0000-0000-000000000000';
+        } else {
+          where.patientId = { in: patientIds };
+        }
+      }
+    } else {
+      // All other roles cannot see stats
+      where.patientId = '00000000-0000-0000-0000-000000000000';
     }
     
     if (metricType) where.metricType = metricType;

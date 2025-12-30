@@ -25,13 +25,20 @@
 Patients can:
 - Book appointments with healthcare providers
 - View consultation notes
-- Access wellness content
-- View learning resources
+- Access wellness content and interactive wellness tools
+- Use AI-powered symptom checker for triage
+- Track wellness habits and join community challenges
+- Access medical aid information and submit claims
+- View comprehensive medical history
+- Participate in video consultations
 
 ### Healthcare Provider
 Healthcare providers can:
 - View and manage appointments
 - Create consultation notes
+- Conduct video consultations via Telehealth Pro
+- Access patient medical history
+- View provider analytics and statistics
 - Create assignments for students
 - Grade student assignments
 
@@ -47,6 +54,10 @@ Students can:
 - View assignments
 - Submit assignments
 - View grades and feedback
+- Use research support tools (topic generator, proposal builder)
+- Connect with research supervisors
+- Track research milestones
+- Collaborate on research projects
 
 ## Features
 
@@ -71,6 +82,44 @@ Students can:
 - Patients can view their consultation notes
 - Notes include diagnosis, prescription, and follow-up information
 
+### Symptom Checker (AI-Powered Triage)
+
+#### Using the Symptom Checker
+1. Navigate to "Symptom Checker"
+2. Enter your symptoms in the text field or select from common symptoms
+3. Add multiple symptoms as needed
+4. Click "Check Symptoms"
+5. Review the AI assessment which includes:
+   - Urgency level (LOW, MEDIUM, HIGH, URGENT, EMERGENCY)
+   - AI recommendations
+   - Confidence score
+6. View your triage history for past assessments
+
+### Telehealth Pro
+
+#### Video Consultations
+1. Navigate to "Telehealth Pro"
+2. For Providers: Create video consultation links for appointments
+3. Select video provider (Zoom, Google Meet, or Custom)
+4. Add meeting link and details
+5. Patients can access video links from their appointments
+
+#### Patient Medical History
+1. Providers can create and update patient medical history
+2. Track:
+   - Medical conditions
+   - Allergies
+   - Current medications
+   - Vital signs
+   - Family history
+3. Patients can view their own medical history
+
+#### Provider Analytics
+- View appointment statistics
+- Track completion rates
+- Monitor video consultation metrics
+- Analyze patient engagement
+
 ### Wellness Hub
 
 #### Viewing Content
@@ -92,6 +141,35 @@ Students can:
    - Image URL (optional)
    - Video URL (optional)
 4. Click "Create"
+
+### Interactive Wellness Tools
+
+#### Creating Wellness Plans
+1. Navigate to "Wellness Tools"
+2. Click "Create Wellness Plan"
+3. Set goals for:
+   - Nutrition
+   - Fitness
+   - Sleep
+   - Meditation
+   - Hydration
+4. Set target dates and milestones
+5. Track your progress
+
+#### Habit Tracking
+1. Navigate to "Wellness Tools"
+2. Click "Add Habit Tracker"
+3. Select habit type (Nutrition, Fitness, Sleep, Meditation, Hydration)
+4. Set daily targets
+5. Log daily entries
+6. View streak statistics and progress charts
+
+#### Community Challenges
+1. Navigate to "Wellness Tools"
+2. Browse available challenges
+3. Click "Join Challenge" to participate
+4. Track your progress and compete with others
+5. View leaderboards and achievements
 
 ### Learning Zone
 
@@ -127,6 +205,54 @@ Students can:
 3. Enter grade and feedback
 4. Click "Grade"
 
+### Research Support (Students Only)
+
+#### Generating Research Topics
+1. Navigate to "Research Support"
+2. Click "Generate Topic"
+3. Select your field of study
+4. Review AI-generated research topics
+5. Save topics of interest
+
+#### Creating Research Proposals
+1. Navigate to "Research Support"
+2. Click "Create Proposal"
+3. Fill in:
+   - Title
+   - Research objectives
+   - Methodology
+   - Expected outcomes
+   - Upload supporting documents
+4. Track proposal status (Draft, Submitted, Under Review, Approved, etc.)
+
+#### Resource Library
+1. Browse curated articles, journals, and datasets
+2. Filter by research field
+3. Download resources for your research
+4. Access academic databases
+
+#### Supervisor Connect
+1. Request connection with volunteer academic mentors
+2. View supervisor profiles and expertise
+3. Send connection requests
+4. Collaborate with matched supervisors
+
+#### Research Milestones
+1. Track your research progress
+2. Set milestones:
+   - Proposal submission
+   - Ethics approval
+   - Data collection
+   - Analysis
+   - Final submission
+3. Update milestone status as you progress
+
+#### Collaboration Tools
+1. Create shared folders for group research
+2. Add notes and documents
+3. Use chat for team communication
+4. Manage collaboration permissions
+
 ## Profile Management
 
 ### Updating Profile
@@ -142,6 +268,47 @@ Students can:
 2. Enter new password in password field
 3. Click "Update Profile"
 
+### Language Settings
+
+#### Changing Language
+1. Click the language selector in the navigation bar
+2. Select your preferred language:
+   - English
+   - Afrikaans
+   - Oshiwambo
+3. The interface will update immediately
+4. Your preference is saved for future sessions
+
+### Medical Aid Management
+
+#### Adding Medical Aid Information
+1. Navigate to your Profile
+2. Go to Medical Aid section
+3. Enter your medical aid details:
+   - Scheme (NAMMED, Medical Aid Fund, Prosana, Other)
+   - Membership number
+   - Policy details
+4. Save your information
+
+#### Submitting Claims
+1. Navigate to Medical Aid section
+2. Click "Submit Claim"
+3. Fill in claim details
+4. Upload supporting documents
+5. Track claim status
+
+### Payment Processing
+
+#### Making Payments
+1. Navigate to payment section when making a purchase
+2. Select payment method:
+   - Credit Card
+   - PayToday
+   - SnapScan
+   - Bank Transfer
+3. Complete payment
+4. View transaction history
+
 ## Mobile App
 
 ### Installation
@@ -155,6 +322,8 @@ The mobile app provides the same features as the web platform:
 - Wellness content access
 - Learning resources
 - Profile management
+- Symptom checker
+- Offline capabilities with automatic sync
 
 ## Troubleshooting
 
@@ -177,6 +346,7 @@ The mobile app provides the same features as the web platform:
 - Check your internet connection
 - Clear browser cache
 - Try refreshing the page
+- The platform works offline - check if you're in offline mode
 
 ## Best Practices
 
@@ -185,6 +355,9 @@ The mobile app provides the same features as the web platform:
 - Provide accurate information
 - Review consultation notes after appointments
 - Access wellness content regularly
+- Use symptom checker before booking appointments
+- Track wellness habits consistently
+- Keep medical aid information updated
 
 ### For Providers
 - Confirm appointments promptly
@@ -203,6 +376,9 @@ The mobile app provides the same features as the web platform:
 - Review feedback from instructors
 - Download learning resources
 - Stay organized with assignment tracking
+- Use research support tools for academic projects
+- Connect with supervisors early in your research
+- Track research milestones regularly
 
 ## Support
 
