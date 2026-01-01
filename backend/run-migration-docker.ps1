@@ -28,6 +28,34 @@ $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 $rootPath = Split-Path -Parent $scriptPath
 Set-Location $rootPath
 
+# Validate Prisma schema exists
+$schemaFile = Join-Path $scriptPath "prisma\schema.prisma"
+if (-not (Test-Path $schemaFile)) {
+    Write-Host "❌ Error: Prisma schema not found at $schemaFile" -ForegroundColor Red
+    exit 1
+}
+
+# Validate schema before running migrations
+Write-Host "🔍 Validating Prisma schema..." -ForegroundColor Cyan
+$validateCommand = "cd /app; npx prisma validate"
+& $composeCmd exec -T backend sh -c $validateCommand
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Error: Prisma schema validation failed" -ForegroundColor Red
+    exit 1
+}
+
+# Ensure migrations directory exists
+$migrationsDir = Join-Path $scriptPath "prisma\migrations"
+if (-not (Test-Path $migrationsDir)) {
+    Write-Host "📁 Creating migrations directory..." -ForegroundColor Cyan
+    New-Item -ItemType Directory -Path $migrationsDir -Force | Out-Null
+    # Create .gitkeep if it doesn't exist
+    $gitkeepPath = Join-Path $migrationsDir ".gitkeep"
+    if (-not (Test-Path $gitkeepPath)) {
+        New-Item -ItemType File -Path $gitkeepPath -Force | Out-Null
+    }
+}
+
 # Check if containers are running
 $psOutput = & $composeCmd ps 2>&1
 $backendRunning = $psOutput | Select-String -Pattern "healthbridge-api|healthbridge-backend|backend.*Up"
@@ -72,9 +100,20 @@ if ($migrateExitCode -eq 0) {
     $generateExitCode = $LASTEXITCODE
     
     if ($generateExitCode -eq 0) {
-        Write-Host "✅ Prisma Client generated!" -ForegroundColor Green
+        Write-Host "🔍 Verifying Prisma Client generation..." -ForegroundColor Cyan
+        $verifyCommand = "cd /app; node -e `"try { require('@prisma/client'); console.log('✅ Prisma Client is available'); } catch(e) { console.error('❌ Prisma Client not found:', e.message); process.exit(1); }`""
+        & $composeCmd exec -T backend sh -c $verifyCommand
+        $verifyExitCode = $LASTEXITCODE
+        
+        if ($verifyExitCode -eq 0) {
+            Write-Host "✅ Prisma Client generated and verified!" -ForegroundColor Green
+        } else {
+            Write-Host "❌ Error: Prisma Client verification failed" -ForegroundColor Red
+            exit 1
+        }
     } else {
-        Write-Host "⚠️  Warning: Prisma Client generation had issues" -ForegroundColor Yellow
+        Write-Host "❌ Error: Prisma Client generation failed" -ForegroundColor Red
+        exit 1
     }
 } else {
     Write-Host ""

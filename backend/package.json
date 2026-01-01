@@ -12,9 +12,9 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
     "seed:docker": "bash seed-docker.sh",
-    "migrate:docker": "powershell -ExecutionPolicy Bypass -File run-migration-docker.ps1",
-    "migrate:docker:simple": "powershell -ExecutionPolicy Bypass -File run-migration-simple.ps1",
-    "migrate:docker:dev": "powershell -ExecutionPolicy Bypass -File migrate-dev-docker.ps1",
+    "migrate:docker": "node run-migration-wrapper.js run-migration-docker",
+    "migrate:docker:simple": "node run-migration-wrapper.js run-migration-simple",
+    "migrate:docker:dev": "node run-migration-wrapper.js migrate-dev-docker",
     "migrate:deploy": "docker-compose exec -T backend sh -c \"cd /app; npx prisma migrate deploy; npx prisma generate\"",
     "migrate:dev": "docker-compose exec -T backend sh -c \"cd /app; npx prisma migrate dev\"",
     "dev:docker": "bash dev-docker.sh"

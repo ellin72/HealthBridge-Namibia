@@ -25,6 +25,30 @@ fi
 # Get migration name from argument or use default
 MIGRATION_NAME=${1:-"update_schema"}
 
+# Validate Prisma schema exists
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCHEMA_FILE="$SCRIPT_DIR/prisma/schema.prisma"
+if [ ! -f "$SCHEMA_FILE" ]; then
+    echo "❌ Error: Prisma schema not found at $SCHEMA_FILE"
+    exit 1
+fi
+
+# Validate schema before running migrations
+echo "🔍 Validating Prisma schema..."
+$COMPOSE_CMD exec -T backend sh -c "cd /app && npx prisma validate" || {
+    echo "❌ Error: Prisma schema validation failed"
+    exit 1
+}
+
+# Ensure migrations directory exists
+MIGRATIONS_DIR="$SCRIPT_DIR/prisma/migrations"
+if [ ! -d "$MIGRATIONS_DIR" ]; then
+    echo "📁 Creating migrations directory..."
+    mkdir -p "$MIGRATIONS_DIR"
+    # Create .gitkeep if it doesn't exist
+    touch "$MIGRATIONS_DIR/.gitkeep"
+fi
+
 # Check if containers are running
 if ! $COMPOSE_CMD ps | grep -q "healthbridge-api\|healthbridge-backend"; then
     echo "⚠️  Backend container is not running. Starting containers..."
@@ -37,14 +61,19 @@ fi
 
 # Run migrations in dev mode (creates new migration)
 echo "📦 Creating new migration: $MIGRATION_NAME"
-$COMPOSE_CMD exec -T backend sh -c "cd /app && npx prisma migrate dev --name $MIGRATION_NAME"
-
-if [ $? -eq 0 ]; then
-    echo ""
-    echo "✅ Migration created and applied successfully!"
-else
+$COMPOSE_CMD exec -T backend sh -c "cd /app && npx prisma migrate dev --name $MIGRATION_NAME" || {
     echo ""
     echo "❌ Migration failed. Please check the error messages above."
     exit 1
-fi
+}
+
+# Verify Prisma Client was generated (migrate dev automatically generates it)
+echo "🔍 Verifying Prisma Client generation..."
+$COMPOSE_CMD exec -T backend sh -c "cd /app && node -e \"try { require('@prisma/client'); console.log('✅ Prisma Client is available'); } catch(e) { console.error('❌ Prisma Client not found:', e.message); process.exit(1); }\"" || {
+    echo "❌ Error: Prisma Client verification failed"
+    exit 1
+}
+
+echo ""
+echo "✅ Migration created and applied successfully!"
 
