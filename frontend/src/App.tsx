@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Appointments from './pages/Appointments';
+import SelectProvider from './pages/SelectProvider';
 import TelehealthPro from './pages/TelehealthPro';
 import WellnessHub from './pages/WellnessHub';
 import WellnessTools from './pages/WellnessTools';
@@ -18,6 +19,7 @@ import UserManagement from './pages/UserManagement';
 import SymptomChecker from './pages/SymptomChecker';
 import Billing from './pages/Billing';
 import ClinicalTemplates from './pages/ClinicalTemplates';
+import Prescriptions from './pages/Prescriptions';
 import UserGuide from './pages/UserGuide';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
@@ -194,6 +196,14 @@ function App() {
               }
             />
             <Route
+              path="/select-provider"
+              element={
+                <PrivateRoute>
+                  <SelectProvider />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/appointments"
               element={
                 <PrivateRoute>
@@ -286,6 +296,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <ClinicalTemplates />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/prescriptions"
+              element={
+                <PrivateRoute>
+                  <Prescriptions />
                 </PrivateRoute>
               }
             />

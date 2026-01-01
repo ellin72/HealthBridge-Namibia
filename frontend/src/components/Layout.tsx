@@ -25,7 +25,8 @@ import {
   People as PeopleIcon,
   VideoCall as VideoCallIcon,
   TrackChanges as TrackIcon,
-  Psychology as ResearchIcon
+  Psychology as ResearchIcon,
+  LocalPharmacy as PharmacyIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,21 +50,77 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
 
-  const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
-    { text: 'Telehealth Pro', icon: <VideoCallIcon />, path: '/telehealth-pro' },
-    { text: 'Symptom Checker', icon: <TrackIcon />, path: '/symptom-checker' },
-    { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
-    { text: 'Wellness Tools', icon: <TrackIcon />, path: '/wellness-tools' },
-    { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
-    ...(user?.role === 'STUDENT'
-      ? [{ text: 'Research Support', icon: <ResearchIcon />, path: '/research' }]
-      : []),
-    ...(user?.role === 'ADMIN'
-      ? [{ text: 'User Management', icon: <PeopleIcon />, path: '/users' }]
-      : []),
-  ];
+  const getMenuItems = () => {
+    if (!user) return [];
+
+    const baseItems = [
+      { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    ];
+
+    // PATIENT menu items
+    if (user.role === 'PATIENT') {
+      return [
+        ...baseItems,
+        { text: 'Choose Provider', icon: <PeopleIcon />, path: '/select-provider' },
+        { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
+        { text: 'Prescriptions', icon: <PharmacyIcon />, path: '/prescriptions' },
+        { text: 'Telehealth Pro', icon: <VideoCallIcon />, path: '/telehealth-pro' },
+        { text: 'Symptom Checker', icon: <TrackIcon />, path: '/symptom-checker' },
+        { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
+        { text: 'Wellness Tools', icon: <TrackIcon />, path: '/wellness-tools' },
+        { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
+      ];
+    }
+
+    // HEALTHCARE_PROVIDER menu items
+    if (user.role === 'HEALTHCARE_PROVIDER') {
+      return [
+        ...baseItems,
+        { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
+        { text: 'Telehealth Pro', icon: <VideoCallIcon />, path: '/telehealth-pro' },
+        { text: 'Clinical Templates', icon: <TrackIcon />, path: '/clinical-templates' },
+        { text: 'Billing', icon: <CalendarIcon />, path: '/billing' },
+        { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
+      ];
+    }
+
+    // WELLNESS_COACH menu items
+    if (user.role === 'WELLNESS_COACH') {
+      return [
+        ...baseItems,
+        { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
+        { text: 'Wellness Tools', icon: <TrackIcon />, path: '/wellness-tools' },
+      ];
+    }
+
+    // STUDENT menu items
+    if (user.role === 'STUDENT') {
+      return [
+        ...baseItems,
+        { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
+        { text: 'Research Support', icon: <ResearchIcon />, path: '/research' },
+      ];
+    }
+
+    // ADMIN menu items (full access)
+    if (user.role === 'ADMIN') {
+      return [
+        ...baseItems,
+        { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
+        { text: 'Telehealth Pro', icon: <VideoCallIcon />, path: '/telehealth-pro' },
+        { text: 'Symptom Checker', icon: <TrackIcon />, path: '/symptom-checker' },
+        { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
+        { text: 'Wellness Tools', icon: <TrackIcon />, path: '/wellness-tools' },
+        { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
+        { text: 'Research Support', icon: <ResearchIcon />, path: '/research' },
+        { text: 'User Management', icon: <PeopleIcon />, path: '/users' },
+      ];
+    }
+
+    return baseItems;
+  };
+
+  const menuItems = getMenuItems();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useLocation } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -33,13 +34,22 @@ import {
   MedicalServices as MedicalServicesIcon,
   Note as NoteIcon,
   Visibility as VisibilityIcon,
+  LocalPharmacy as PharmacyIcon,
+  AttachMoney as MoneyIcon,
+  Payment as PaymentIcon,
+  CreditCard as CreditCardIcon,
+  AccountBalance as BankIcon,
+  Receipt as ReceiptIcon,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import api from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 
 const Appointments: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [postponeOpen, setPostponeOpen] = useState(false);
@@ -49,11 +59,16 @@ const Appointments: React.FC = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuAppointmentId, setMenuAppointmentId] = useState<string | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<any>(null);
   const [formData, setFormData] = useState({
     providerId: '',
     appointmentDate: '',
-    notes: ''
+    notes: '',
+    paymentMethod: ''
   });
+  
+  // Get appointment fee from selected provider or default
+  const appointmentFee = selectedProvider?.consultationFee || 500;
   const [rescheduleData, setRescheduleData] = useState({
     appointmentDate: '',
     notes: ''
@@ -66,46 +81,136 @@ const Appointments: React.FC = () => {
   });
   const queryClient = useQueryClient();
 
+  // Check if provider was pre-selected from SelectProvider page
+  useEffect(() => {
+    if (location.state?.selectedProvider) {
+      const provider = location.state.selectedProvider;
+      setSelectedProvider(provider);
+      setFormData(prev => ({ ...prev, providerId: provider.id }));
+      setOpen(true);
+      // Clear the state to avoid re-opening on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
   const { data: appointments, isLoading } = useQuery(
     'appointments',
     () => api.get('/appointments').then(res => res.data)
   );
+
+  // Fetch invoices for patients
+  const { data: invoicesData } = useQuery(
+    'patient-invoices',
+    () => api.get('/billing').then(res => res.data),
+    { enabled: !!user && user.role === 'PATIENT' }
+  );
+
+  const invoices = invoicesData?.invoices || [];
+  
+  // Helper function to get invoice for an appointment
+  const getAppointmentInvoice = (appointmentId: string) => {
+    return invoices.find((inv: any) => inv.appointmentId === appointmentId);
+  };
+
+  // Payment methods configuration
+  const paymentMethods = [
+    { value: 'CREDIT_CARD', label: 'Credit Card', icon: <CreditCardIcon sx={{ fontSize: 20 }} /> },
+    { value: 'PAYTODAY', label: 'PayToday', icon: <PaymentIcon sx={{ fontSize: 20 }} /> },
+    { value: 'SNAPSCAN', label: 'SnapScan', icon: <PaymentIcon sx={{ fontSize: 20 }} /> },
+    { value: 'BANK_TRANSFER', label: 'Bank Transfer', icon: <BankIcon sx={{ fontSize: 20 }} /> },
+  ];
 
   const { data: providers, isLoading: providersLoading, error: providersError } = useQuery(
     'providers',
     async () => {
       try {
         const response = await api.get('/users/providers');
-        console.log('Providers API response:', response);
-        console.log('Providers data:', response.data);
-        console.log('Providers count:', Array.isArray(response.data) ? response.data.length : 'Not an array');
         return response.data;
       } catch (error: any) {
         console.error('Error fetching providers:', error);
-        console.error('Error response:', error.response);
         throw error;
       }
     },
     { 
       enabled: user?.role === 'PATIENT',
       retry: 1,
-      onError: (error: any) => {
-        console.error('Providers query error:', error);
-        if (error.response) {
-          console.error('Error status:', error.response.status);
-          console.error('Error data:', error.response.data);
-        }
-      }
     }
   );
 
+  // Update selected provider when providerId changes in form
+  useEffect(() => {
+    if (formData.providerId && providers) {
+      const provider = providers.find((p: any) => p.id === formData.providerId);
+      if (provider) {
+        setSelectedProvider(provider);
+      }
+    }
+  }, [formData.providerId, providers]);
+
   const createMutation = useMutation(
-    (data: any) => api.post('/appointments', data),
+    async (data: any) => {
+      // Get the actual fee from selected provider
+      const fee = selectedProvider?.consultationFee || 500;
+      const currency = selectedProvider?.currency || 'NAD';
+      
+      // First create the appointment (which also creates an invoice)
+      const appointmentResponse = await api.post('/appointments', {
+        providerId: data.providerId,
+        appointmentDate: data.appointmentDate,
+        notes: data.notes
+      });
+      
+      // Then process payment if payment method is selected
+      if (data.paymentMethod && appointmentResponse.data.appointment) {
+        try {
+          // Get invoice ID from the appointment response
+          const invoiceId = appointmentResponse.data.invoice?.id;
+          
+          const paymentResponse = await api.post('/payments', {
+            invoiceId: invoiceId,
+            appointmentId: appointmentResponse.data.appointment.id,
+            amount: fee,
+            method: data.paymentMethod,
+            currency: currency
+          });
+          
+          // Return both appointment and payment info
+          return {
+            ...appointmentResponse,
+            payment: paymentResponse.data.payment
+          };
+        } catch (paymentError: any) {
+          console.error('Payment error:', paymentError);
+          // Payment failed, but appointment is created
+          // In production, you might want to rollback the appointment or handle this differently
+          throw new Error('Appointment created but payment failed. Please contact support.');
+        }
+      }
+      
+      return appointmentResponse;
+    },
     {
-      onSuccess: () => {
+      onSuccess: (data) => {
         queryClient.invalidateQueries('appointments');
+        queryClient.invalidateQueries('patient-invoices');
+        queryClient.invalidateQueries('billing-stats');
         setOpen(false);
-        setFormData({ providerId: '', appointmentDate: '', notes: '' });
+        setFormData({ providerId: '', appointmentDate: '', notes: '', paymentMethod: '' });
+        
+        // Show success message
+        const fee = selectedProvider?.consultationFee || 500;
+        const currency = selectedProvider?.currency || 'NAD';
+        if (data.payment?.status === 'COMPLETED') {
+          alert(`Appointment booked successfully! Payment of ${currency} ${fee.toFixed(2)} has been processed.`);
+        } else {
+          alert('Appointment booked successfully! Please complete payment to confirm your appointment.');
+        }
+        // Reset form and selected provider
+        setSelectedProvider(null);
+      },
+      onError: (error: any) => {
+        console.error('Create appointment error:', error);
+        alert(error.message || error.response?.data?.message || 'Failed to create appointment. Please try again.');
       }
     }
   );
@@ -156,7 +261,11 @@ const Appointments: React.FC = () => {
   );
 
   const handleCreate = () => {
-    createMutation.mutate(formData);
+    if (!formData.paymentMethod) {
+      alert('Please select a payment method to complete your booking.');
+      return;
+    }
+    createMutation.mutate({ ...formData, fee: appointmentFee });
   };
 
   const handleStatusChange = (id: string, status: string) => {
@@ -277,40 +386,107 @@ const Appointments: React.FC = () => {
     <Layout>
       <Box sx={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
         <Container maxWidth="xl" sx={{ py: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Box>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  color: '#1e293b',
-                  mb: 0.5,
-                }}
-              >
-                Appointments
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#64748b' }}>
-                Manage your healthcare appointments
-              </Typography>
-            </Box>
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 700,
+                    color: '#1e293b',
+                    mb: 0.5,
+                  }}
+                >
+                  Appointments
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#64748b' }}>
+                  {user?.role === 'PATIENT'
+                    ? 'Manage your healthcare appointments'
+                    : 'Manage your patient appointments'}
+                </Typography>
+              </Box>
             {user?.role === 'PATIENT' && (
-              <Button
-                variant="contained"
-                onClick={() => setOpen(true)}
-                sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  px: 3,
-                  py: 1.5,
-                  fontWeight: 600,
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)',
-                  },
-                }}
-              >
-                Book Appointment
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/select-provider')}
+                  sx={{
+                    borderColor: '#667eea',
+                    color: '#667eea',
+                    px: 3,
+                    py: 1.5,
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: '#5568d3',
+                      backgroundColor: 'rgba(102, 126, 234, 0.04)',
+                    },
+                  }}
+                >
+                  Choose Provider
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => setOpen(true)}
+                  sx={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    px: 3,
+                    py: 1.5,
+                    fontWeight: 600,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)',
+                    },
+                  }}
+                >
+                  Book Appointment
+                </Button>
+              </Box>
             )}
+            </Box>
           </Box>
+
+          {/* Payment Methods Information for Patients */}
+          {user?.role === 'PATIENT' && (
+            <Card sx={{ mb: 4, background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', border: '1px solid #bae6fd' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <PaymentIcon sx={{ fontSize: 28, color: '#2563eb', mr: 1.5 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e40af' }}>
+                    Accepted Payment Methods
+                  </Typography>
+                </Box>
+                <Grid container spacing={2}>
+                  {paymentMethods.map((method) => (
+                    <Grid item xs={12} sm={6} md={3} key={method.value}>
+                      <Box
+                        sx={{
+                          p: 2,
+                          backgroundColor: 'white',
+                          borderRadius: 2,
+                          border: '1px solid #e2e8f0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                            transform: 'translateY(-2px)',
+                          },
+                        }}
+                      >
+                        <Box sx={{ color: '#2563eb' }}>{method.icon}</Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                          {method.label}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+                <Typography variant="caption" sx={{ color: '#64748b', mt: 2, display: 'block' }}>
+                  All payments are processed securely. You'll receive an invoice after your appointment is completed.
+                </Typography>
+              </CardContent>
+            </Card>
+          )}
 
           {isLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -431,6 +607,98 @@ const Appointments: React.FC = () => {
                           {appointment.notes}
                         </Typography>
                       )}
+
+                      {/* Appointment Fee and Payment Information for Patients */}
+                      {user?.role === 'PATIENT' && (() => {
+                        const invoice = getAppointmentInvoice(appointment.id);
+                        return invoice ? (
+                          <Box sx={{ mt: 2, p: 2, backgroundColor: '#f0f9ff', borderRadius: 2, border: '1px solid #bae6fd' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <MoneyIcon sx={{ fontSize: 20, color: '#2563eb' }} />
+                                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1e40af' }}>
+                                  Appointment Fee
+                                </Typography>
+                              </Box>
+                              <Chip
+                                label={invoice.status}
+                                size="small"
+                                color={
+                                  invoice.status === 'PAID'
+                                    ? 'success'
+                                    : invoice.status === 'PENDING'
+                                    ? 'warning'
+                                    : 'default'
+                                }
+                                sx={{ fontWeight: 600 }}
+                              />
+                            </Box>
+                            <Box sx={{ mb: 1.5 }}>
+                              <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', mb: 0.5 }}>
+                                {invoice.currency} {invoice.total?.toFixed(2)}
+                              </Typography>
+                              {invoice.dueDate && (
+                                <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                  Due: {new Date(invoice.dueDate).toLocaleDateString()}
+                                </Typography>
+                              )}
+                            </Box>
+                            <Box sx={{ mb: 1.5 }}>
+                              <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748b', display: 'block', mb: 1 }}>
+                                Available Payment Methods:
+                              </Typography>
+                              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                {paymentMethods.map((method) => (
+                                  <Chip
+                                    key={method.value}
+                                    icon={method.icon}
+                                    label={method.label}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{
+                                      borderColor: '#cbd5e1',
+                                      color: '#475569',
+                                    }}
+                                  />
+                                ))}
+                              </Box>
+                            </Box>
+                            <Button
+                              variant="contained"
+                              size="small"
+                              fullWidth
+                              startIcon={<ReceiptIcon />}
+                              onClick={() => navigate('/billing')}
+                              sx={{
+                                background: invoice.status === 'PAID'
+                                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                                  : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                fontWeight: 600,
+                                '&:hover': {
+                                  background: invoice.status === 'PAID'
+                                    ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                                    : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                                },
+                              }}
+                            >
+                              {invoice.status === 'PAID' ? 'View Invoice' : 'Pay Now'}
+                            </Button>
+                          </Box>
+                        ) : appointment.status === 'COMPLETED' || appointment.status === 'CONFIRMED' ? (
+                          <Box sx={{ mt: 2, p: 1.5, backgroundColor: '#fef3c7', borderRadius: 2, border: '1px solid #fde68a' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <MoneyIcon sx={{ fontSize: 18, color: '#d97706' }} />
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#92400e' }}>
+                                Invoice Pending
+                              </Typography>
+                            </Box>
+                            <Typography variant="caption" sx={{ color: '#78350f' }}>
+                              Your healthcare provider will send an invoice after the appointment.
+                            </Typography>
+                          </Box>
+                        ) : null;
+                      })()}
+
                       <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         {user?.role === 'HEALTHCARE_PROVIDER' && appointment.status === 'PENDING' && (
                           <Button
@@ -481,17 +749,42 @@ const Appointments: React.FC = () => {
                           </>
                         )}
                         {appointment.status === 'COMPLETED' && (
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<NoteIcon />}
-                            onClick={() => handleViewConsultation(appointment)}
-                            sx={{
-                              fontWeight: 600,
-                            }}
-                          >
-                            View Consultation Notes
-                          </Button>
+                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            {user?.role === 'PATIENT' && (
+                              <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<PharmacyIcon />}
+                                onClick={() => navigate('/prescriptions')}
+                                sx={{
+                                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                  fontWeight: 600,
+                                  '&:hover': {
+                                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                                  },
+                                }}
+                              >
+                                View Prescriptions
+                              </Button>
+                            )}
+                            <Button
+                              variant={user?.role === 'PATIENT' ? 'outlined' : 'contained'}
+                              size="small"
+                              startIcon={<NoteIcon />}
+                              onClick={() => handleViewConsultation(appointment)}
+                              sx={{
+                                fontWeight: 600,
+                                ...(user?.role !== 'PATIENT' && {
+                                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                  '&:hover': {
+                                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                                  },
+                                }),
+                              }}
+                            >
+                              View Consultation Notes
+                            </Button>
+                          </Box>
                         )}
                       </Box>
                     </CardContent>
@@ -554,7 +847,11 @@ const Appointments: React.FC = () => {
 
           <Dialog
             open={open}
-            onClose={() => setOpen(false)}
+            onClose={() => {
+              setOpen(false);
+              setFormData({ providerId: '', appointmentDate: '', notes: '', paymentMethod: '' });
+              setSelectedProvider(null);
+            }}
             maxWidth="sm"
             fullWidth
             PaperProps={{
@@ -585,23 +882,53 @@ const Appointments: React.FC = () => {
                     Failed to load providers. Please try again.
                   </Alert>
                 ) : (
-                  <Select
-                    value={formData.providerId}
-                    label="Provider"
-                    onChange={(e) => setFormData({ ...formData, providerId: e.target.value })}
-                  >
-                    {providers && Array.isArray(providers) && providers.length > 0 ? (
-                      providers.map((provider: any) => (
-                        <MenuItem key={provider.id} value={provider.id}>
-                          Dr. {provider.firstName} {provider.lastName}
+                  <>
+                    <Select
+                      value={formData.providerId}
+                      label="Provider"
+                      onChange={(e) => {
+                        const provider = providers?.find((p: any) => p.id === e.target.value);
+                        setSelectedProvider(provider || null);
+                        setFormData({ ...formData, providerId: e.target.value });
+                      }}
+                    >
+                      {providers && Array.isArray(providers) && providers.length > 0 ? (
+                        providers.map((provider: any) => (
+                          <MenuItem key={provider.id} value={provider.id}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                              <Box>
+                                Dr. {provider.firstName} {provider.lastName}
+                              </Box>
+                              <Chip
+                                label={`${provider.currency} ${provider.consultationFee.toFixed(2)}`}
+                                size="small"
+                                sx={{
+                                  ml: 2,
+                                  backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                                  color: '#2563eb',
+                                  fontWeight: 600,
+                                }}
+                              />
+                            </Box>
+                          </MenuItem>
+                        ))
+                      ) : (
+                        <MenuItem disabled>
+                          {providersLoading ? 'Loading...' : 'No providers available'}
                         </MenuItem>
-                      ))
-                    ) : (
-                      <MenuItem disabled>
-                        {providersLoading ? 'Loading...' : 'No providers available'}
-                      </MenuItem>
+                      )}
+                    </Select>
+                    {!formData.providerId && (
+                      <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => navigate('/select-provider')}
+                        sx={{ mt: 1, textTransform: 'none' }}
+                      >
+                        Browse all providers with fees →
+                      </Button>
                     )}
-                  </Select>
+                  </>
                 )}
               </FormControl>
               {providersError && (
@@ -638,6 +965,78 @@ const Appointments: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Any additional information about your appointment..."
               />
+
+              {/* Appointment Fee Display */}
+              {selectedProvider && (
+                <Box sx={{ mt: 3, p: 2, backgroundColor: '#f0f9ff', borderRadius: 2, border: '1px solid #bae6fd' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <MoneyIcon sx={{ fontSize: 24, color: '#2563eb' }} />
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1e40af' }}>
+                        Consultation Fee
+                      </Typography>
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                      {selectedProvider.currency} {appointmentFee.toFixed(2)}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" sx={{ color: '#64748b', mb: 1 }}>
+                    Provider: Dr. {selectedProvider.firstName} {selectedProvider.lastName}
+                  </Typography>
+                  {selectedProvider.serviceFees && Object.keys(selectedProvider.serviceFees).length > 0 && (
+                    <Box sx={{ mt: 1, p: 1.5, backgroundColor: 'white', borderRadius: 1 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748b', display: 'block', mb: 0.5 }}>
+                        Additional Services Available:
+                      </Typography>
+                      {Object.entries(selectedProvider.serviceFees).map(([service, fee]: [string, any]) => (
+                        <Box key={service} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                          <Typography variant="caption" sx={{ color: '#64748b' }}>
+                            {service}:
+                          </Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                            {selectedProvider.currency} {fee.toFixed(2)}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                  <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 2 }}>
+                    Payment is required to confirm your appointment booking.
+                  </Typography>
+                </Box>
+              )}
+              {!selectedProvider && formData.providerId && (
+                <Alert severity="info" sx={{ mt: 3 }}>
+                  Please select a provider to see consultation fees
+                </Alert>
+              )}
+
+                {/* Payment Method Selection */}
+                <FormControl fullWidth required>
+                  <InputLabel>Select Payment Method</InputLabel>
+                  <Select
+                    value={formData.paymentMethod}
+                    label="Select Payment Method"
+                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                  >
+                    {paymentMethods.map((method) => (
+                      <MenuItem key={method.value} value={method.value}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box sx={{ color: '#2563eb' }}>{method.icon}</Box>
+                          <Typography>{method.label}</Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                {formData.paymentMethod && (
+                  <Box sx={{ mt: 2, p: 1.5, backgroundColor: 'white', borderRadius: 1, border: '1px solid #cbd5e1' }}>
+                    <Typography variant="body2" sx={{ color: '#64748b', mb: 0.5 }}>
+                      You will be redirected to complete payment via {paymentMethods.find(m => m.value === formData.paymentMethod)?.label}
+                    </Typography>
+                  </Box>
+                )}
             </DialogContent>
             <DialogActions sx={{ p: 3, pt: 2 }}>
               <Button
@@ -652,16 +1051,24 @@ const Appointments: React.FC = () => {
               <Button
                 onClick={handleCreate}
                 variant="contained"
-                disabled={!formData.providerId || !formData.appointmentDate}
+                disabled={!formData.providerId || !formData.appointmentDate || !formData.paymentMethod || createMutation.isLoading || !selectedProvider}
+                startIcon={createMutation.isLoading ? <CircularProgress size={16} /> : <PaymentIcon />}
                 sx={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   fontWeight: 600,
                   '&:hover': {
                     background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)',
                   },
+                  '&:disabled': {
+                    background: '#cbd5e1',
+                  },
                 }}
               >
-                Book Appointment
+                {createMutation.isLoading 
+                  ? 'Processing...' 
+                  : selectedProvider 
+                    ? `Book & Pay ${selectedProvider.currency} ${appointmentFee.toFixed(2)}`
+                    : 'Select Provider First'}
               </Button>
             </DialogActions>
           </Dialog>

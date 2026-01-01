@@ -24,7 +24,7 @@ docker run --rm \
   -w /app \
   --network healthbridge-namibia_default \
   -e DATABASE_URL="postgresql://healthbridge:healthbridge123@postgres:5432/healthbridge?schema=public" \
-  node:18 sh -c "npm install && npm run prisma:seed"
+  node:18 sh -c "npm ci && npm run prisma:seed"
 
 if [ $? -eq 0 ]; then
   echo ""

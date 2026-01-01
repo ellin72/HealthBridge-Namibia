@@ -1,0 +1,24 @@
+# Docker Compose override for running migrations
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.migrate.yml run --rm migration
+
+version: '3.8'
+
+services:
+  migration:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: healthbridge-migration
+    environment:
+      DATABASE_URL: postgresql://healthbridge:healthbridge123@postgres:5432/healthbridge?schema=public
+      NODE_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: sh -c "npx prisma migrate deploy && npx prisma generate"
+    networks:
+      - default
+

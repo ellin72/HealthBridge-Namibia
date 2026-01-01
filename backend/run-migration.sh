@@ -24,7 +24,7 @@ docker run --rm \
   -w /app \
   --network healthbridge-namibia_default \
   -e DATABASE_URL="postgresql://healthbridge:healthbridge123@postgres:5432/healthbridge?schema=public" \
-  node:18 sh -c "npm install && npx prisma migrate dev --name init"
+  node:18 sh -c "npm ci && npx prisma migrate dev --name init"
 
 if [ $? -eq 0 ]; then
   echo ""

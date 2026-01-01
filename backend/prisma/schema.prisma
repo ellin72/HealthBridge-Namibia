@@ -114,8 +114,10 @@ enum MedicalAidScheme {
 
 enum PaymentMethod {
   CREDIT_CARD
+  DEBIT_CARD
   PAYTODAY
   SNAPSCAN
+  MOBILE_MONEY
   BANK_TRANSFER
 }
 
@@ -179,6 +181,12 @@ model User {
   invoicesAsProvider        BillingInvoice[] @relation("ProviderInvoices")
   clinicalTemplates         ClinicalTemplate[] @relation("ProviderTemplates")
   remoteMonitoringData      RemoteMonitoringData[] @relation("PatientMonitoring")
+  
+  // Billing System Enhancements
+  providerFee              ProviderFee?
+  subscriptions           Subscription[] @relation("SubscriberSubscriptions")
+  subscriptionPayments    SubscriptionPayment[]
+  twoFactorAuth           TwoFactorAuth?
 
   @@index([email])
   @@index([role])
@@ -631,6 +639,7 @@ model TriageAssessment {
 model Payment {
   id              String          @id @default(uuid())
   userId          String
+  invoiceId       String?         // Link to invoice
   appointmentId  String?
   amount          Float
   currency        String          @default("NAD")
@@ -639,15 +648,22 @@ model Payment {
   transactionId  String?         // External payment gateway transaction ID
   paymentReference String?       // For mobile payments
   metadata        String?         // JSON for additional payment data
+  requires2FA     Boolean         @default(false)
+  twoFactorVerified Boolean       @default(false)
+  encryptedCardData String?       // Encrypted card data (PCI-DSS compliant)
   completedAt     DateTime?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice         BillingInvoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  auditLogs       PaymentAuditLog[]
 
   @@index([userId])
+  @@index([invoiceId])
   @@index([status])
   @@index([transactionId])
+  @@index([paymentReference])
   @@index([createdAt])
 }
 
@@ -792,12 +808,211 @@ model BillingInvoice {
 
   provider        User              @relation("ProviderInvoices", fields: [providerId], references: [id], onDelete: Cascade)
   patient         User              @relation("PatientInvoices", fields: [patientId], references: [id], onDelete: Cascade)
+  payments                 Payment[]
+  receipts                  Receipt[]
 
   @@index([providerId])
   @@index([patientId])
   @@index([status])
   @@index([invoiceNumber])
   @@index([dueDate])
+}
+
+// Provider Fee Settings
+model ProviderFee {
+  id              String            @id @default(uuid())
+  providerId      String            @unique
+  consultationFee Float             @default(500) // Default consultation fee in NAD
+  serviceFees     String?           // JSON object for different service fees
+  currency        String            @default("NAD")
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  provider        User              @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@index([isActive])
+}
+
+// Payment Audit Log for Fraud Detection
+model PaymentAuditLog {
+  id              String            @id @default(uuid())
+  paymentId       String
+  action          String            // CREATED, APPROVED, REJECTED, REFUNDED, SUSPICIOUS
+  userId          String?           // User who performed the action
+  ipAddress       String?
+  userAgent       String?
+  details         String?           // JSON for additional details
+  riskScore       Float?            // 0-1 risk score for fraud detection
+  flagged         Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+
+  payment         Payment           @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([action])
+  @@index([flagged])
+  @@index([createdAt])
+}
+
+// Two-Factor Authentication for Payments
+model TwoFactorAuth {
+  id              String            @id @default(uuid())
+  userId          String            @unique
+  secret          String            // Encrypted 2FA secret
+  backupCodes     String?           // JSON array of backup codes (encrypted)
+  isEnabled       Boolean           @default(false)
+  lastUsed        DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Subscription Models
+enum SubscriptionType {
+  MONTHLY_WELLNESS
+  STUDENT_RESEARCH
+  PREMIUM_PATIENT
+  PROVIDER_PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  SUSPENDED
+}
+
+model Subscription {
+  id              String            @id @default(uuid())
+  subscriberId    String            // User who subscribes
+  type            SubscriptionType
+  status          SubscriptionStatus @default(ACTIVE)
+  startDate       DateTime          @default(now())
+  endDate         DateTime
+  autoRenew       Boolean           @default(true)
+  price           Float
+  currency        String            @default("NAD")
+  discountCodeId  String?           // Applied discount code
+  metadata        String?           // JSON for subscription details
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  subscriber      User              @relation("SubscriberSubscriptions", fields: [subscriberId], references: [id], onDelete: Cascade)
+  discountCode    DiscountCode?     @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
+  payments        SubscriptionPayment[]
+
+  @@index([subscriberId])
+  @@index([type])
+  @@index([status])
+  @@index([endDate])
+}
+
+model SubscriptionPayment {
+  id              String            @id @default(uuid())
+  subscriptionId  String
+  userId          String
+  amount          Float
+  currency        String            @default("NAD")
+  paymentMethod   PaymentMethod
+  status          PaymentStatus     @default(PENDING)
+  transactionId   String?
+  dueDate         DateTime
+  paidDate        DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  subscription    Subscription      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([userId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// Discount Codes and Promotions
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model DiscountCode {
+  id              String            @id @default(uuid())
+  code            String            @unique
+  description     String?
+  discountType    DiscountType
+  discountValue   Float             // Percentage (0-100) or fixed amount
+  minPurchase     Float?            // Minimum purchase amount
+  maxDiscount     Float?            // Maximum discount amount
+  validFrom       DateTime
+  validUntil      DateTime
+  usageLimit      Int?              // Total usage limit
+  usedCount       Int               @default(0)
+  isActive        Boolean           @default(true)
+  applicableTo     String?           // JSON array of applicable services/types
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  subscriptions   Subscription[]
+
+  @@index([code])
+  @@index([isActive])
+  @@index([validFrom])
+  @@index([validUntil])
+}
+
+// Digital Receipts
+model Receipt {
+  id              String            @id @default(uuid())
+  invoiceId       String
+  receiptNumber   String            @unique
+  pdfUrl          String?           // URL to generated PDF receipt
+  emailSent       Boolean           @default(false)
+  smsSent         Boolean           @default(false)
+  emailSentAt      DateTime?
+  smsSentAt        DateTime?
+  createdAt       DateTime          @default(now())
+
+  invoice         BillingInvoice    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([receiptNumber])
+}
+
+// Provider Earnings and Payouts
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model ProviderEarnings {
+  id              String            @id @default(uuid())
+  providerId      String
+  periodStart     DateTime
+  periodEnd       DateTime
+  totalEarnings   Float
+  platformFee     Float             // Platform commission
+  netEarnings     Float              // Total - Platform fee
+  currency        String            @default("NAD")
+  payoutStatus    PayoutStatus      @default(PENDING)
+  payoutDate       DateTime?
+  transactionId   String?
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([providerId])
+  @@index([payoutStatus])
+  @@index([periodStart])
+  @@index([periodEnd])
 }
 
 model RemoteMonitoringData {

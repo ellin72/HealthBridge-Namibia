@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
+import { generateInvoiceAfterConsultation } from './billingController';
 
 const prisma = new PrismaClient();
 
@@ -64,6 +65,19 @@ export const createConsultationNote = async (req: AuthRequest, res: Response) =>
       where: { id: appointmentId },
       data: { status: 'COMPLETED' }
     });
+
+    // Automatically generate invoice after consultation
+    try {
+      const invoice = await generateInvoiceAfterConsultation(
+        appointmentId,
+        providerId,
+        appointment.patientId
+      );
+      console.log(`Invoice ${invoice.invoiceNumber} generated for consultation`);
+    } catch (invoiceError: any) {
+      console.error('Error generating invoice after consultation:', invoiceError);
+      // Don't fail the consultation if invoice generation fails
+    }
 
     res.status(201).json({ message: 'Consultation note created successfully', consultationNote });
   } catch (error: any) {

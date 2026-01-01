@@ -25,6 +25,9 @@ import medicationRoutes from './routes/medications';
 import clinicalTemplateRoutes from './routes/clinicalTemplates';
 import billingRoutes from './routes/billing';
 import monitoringRoutes from './routes/monitoring';
+import providerFeeRoutes from './routes/providerFees';
+import providerEarningsRoutes from './routes/providerEarnings';
+import adminMonitoringRoutes from './routes/adminMonitoring';
 
 // Load environment variables
 dotenv.config();
@@ -74,6 +77,9 @@ app.use('/api/medications', medicationRoutes);
 app.use('/api/clinical-templates', clinicalTemplateRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/monitoring', monitoringRoutes);
+app.use('/api/provider-fees', providerFeeRoutes);
+app.use('/api/provider-earnings', providerEarningsRoutes);
+app.use('/api/admin', adminMonitoringRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

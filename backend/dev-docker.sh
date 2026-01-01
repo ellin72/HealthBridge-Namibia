@@ -29,5 +29,5 @@ docker run --rm -it \
   -e JWT_EXPIRES_IN="7d" \
   -e PORT="5000" \
   -e NODE_ENV="development" \
-  node:18 sh -c "npm install && npm run dev"
+  node:18 sh -c "npm ci && npm run dev"
 

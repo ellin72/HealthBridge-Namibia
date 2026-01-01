@@ -275,7 +275,15 @@ export const getProviders = async (req: AuthRequest, res: Response) => {
         lastName: true,
         phone: true,
         role: true,
-        createdAt: true
+        createdAt: true,
+        providerFee: {
+          select: {
+            consultationFee: true,
+            serviceFees: true,
+            currency: true,
+            isActive: true
+          }
+        }
       },
       orderBy: [
         { lastName: 'asc' },
@@ -283,10 +291,37 @@ export const getProviders = async (req: AuthRequest, res: Response) => {
       ]
     });
 
-    console.log(`Found ${providers.length} healthcare providers`);
-    console.log('Providers:', providers.map(p => `${p.firstName} ${p.lastName} (${p.role})`));
+    // Format providers with fee information
+    const providersWithFees = providers.map(provider => {
+      let serviceFees = null;
+      if (provider.providerFee?.serviceFees) {
+        try {
+          serviceFees = JSON.parse(provider.providerFee.serviceFees);
+        } catch (parseError) {
+          console.warn(`Failed to parse serviceFees for provider ${provider.id}:`, parseError);
+          serviceFees = null;
+        }
+      }
+      
+      return {
+        id: provider.id,
+        email: provider.email,
+        firstName: provider.firstName,
+        lastName: provider.lastName,
+        phone: provider.phone,
+        role: provider.role,
+        createdAt: provider.createdAt,
+        consultationFee: provider.providerFee?.consultationFee || 500, // Default to 500 if no fee set
+        serviceFees,
+        currency: provider.providerFee?.currency || 'NAD',
+        feeActive: provider.providerFee?.isActive ?? true
+      };
+    });
 
-    res.json(providers);
+    console.log(`Found ${providersWithFees.length} healthcare providers`);
+    console.log('Providers:', providersWithFees.map(p => `${p.firstName} ${p.lastName} - ${p.currency} ${p.consultationFee}`));
+
+    res.json(providersWithFees);
   } catch (error: any) {
     console.error('Get providers error:', error);
     res.status(500).json({ message: 'Failed to get providers', error: error.message });

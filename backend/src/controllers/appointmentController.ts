@@ -52,7 +52,82 @@ export const createAppointment = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    res.status(201).json({ message: 'Appointment created successfully', appointment });
+    // Get provider fee settings
+    let providerFee = await prisma.providerFee.findUnique({
+      where: { providerId }
+    });
+
+    // Create default fee if doesn't exist
+    if (!providerFee) {
+      providerFee = await prisma.providerFee.create({
+        data: {
+          providerId,
+          consultationFee: 500, // Default NAD 500
+          currency: 'NAD',
+          isActive: true
+        }
+      });
+    }
+
+    // Use provider's consultation fee
+    const appointmentFee = providerFee.consultationFee;
+    const currency = providerFee.currency || 'NAD';
+    
+    // Get service fees if available
+    const serviceFees = providerFee.serviceFees ? JSON.parse(providerFee.serviceFees) : {};
+    
+    // Create invoice items
+    const invoiceItems = [
+      {
+        description: 'Healthcare Consultation Appointment',
+        quantity: 1,
+        price: appointmentFee
+      }
+    ];
+
+    // Add additional service fees if any
+    if (Object.keys(serviceFees).length > 0) {
+      for (const [service, fee] of Object.entries(serviceFees)) {
+        invoiceItems.push({
+          description: service,
+          quantity: 1,
+          price: fee as number
+        });
+      }
+    }
+
+    const subtotal = invoiceItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const tax = 0; // VAT can be added if applicable
+    const total = subtotal + tax;
+
+    const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+    const invoice = await prisma.billingInvoice.create({
+      data: {
+        providerId,
+        patientId,
+        appointmentId: appointment.id,
+        invoiceNumber,
+        items: JSON.stringify(invoiceItems),
+        subtotal,
+        tax,
+        discount: 0,
+        total,
+        currency,
+        status: 'PENDING', // Will be updated to PAID when payment is processed
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+        notes: `Invoice for appointment scheduled on ${new Date(appointmentDate).toLocaleDateString()}`
+      }
+    });
+
+    res.status(201).json({ 
+      message: 'Appointment created successfully', 
+      appointment,
+      invoice: {
+        ...invoice,
+        items: JSON.parse(invoice.items)
+      }
+    });
   } catch (error: any) {
     console.error('Create appointment error:', error);
     res.status(500).json({ message: 'Failed to create appointment', error: error.message });

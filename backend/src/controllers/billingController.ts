@@ -4,6 +4,101 @@ import { AuthRequest } from '../middleware/auth';
 
 const prisma = new PrismaClient();
 
+// Automatically generate invoice after consultation
+export const generateInvoiceAfterConsultation = async (
+  appointmentId: string,
+  providerId: string,
+  patientId: string
+): Promise<any> => {
+  try {
+    // Check if invoice already exists for this appointment
+    const existingInvoice = await prisma.billingInvoice.findFirst({
+      where: { appointmentId }
+    });
+
+    if (existingInvoice) {
+      return existingInvoice;
+    }
+
+    // Get provider fee settings
+    let providerFee = await prisma.providerFee.findUnique({
+      where: { providerId }
+    });
+
+    // Create default fee if doesn't exist
+    if (!providerFee) {
+      providerFee = await prisma.providerFee.create({
+        data: {
+          providerId,
+          consultationFee: 500,
+          currency: 'NAD',
+          isActive: true
+        }
+      });
+    }
+
+    // Get service fees if available
+    const serviceFees = providerFee.serviceFees ? JSON.parse(providerFee.serviceFees) : {};
+    const consultationFee = providerFee.consultationFee;
+
+    // Create invoice items
+    const items = [
+      {
+        description: 'Healthcare Consultation',
+        quantity: 1,
+        price: consultationFee
+      }
+    ];
+
+    // Add additional service fees if any
+    if (Object.keys(serviceFees).length > 0) {
+      for (const [service, fee] of Object.entries(serviceFees)) {
+        items.push({
+          description: service,
+          quantity: 1,
+          price: fee as number
+        });
+      }
+    }
+
+    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const tax = 0; // VAT can be added if applicable
+    const total = subtotal + tax;
+
+    // Generate invoice number
+    const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+    const invoice = await prisma.billingInvoice.create({
+      data: {
+        providerId,
+        patientId,
+        appointmentId,
+        invoiceNumber,
+        items: JSON.stringify(items),
+        subtotal,
+        tax,
+        discount: 0,
+        total,
+        status: 'PENDING',
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      },
+      include: {
+        patient: {
+          select: { id: true, firstName: true, lastName: true, email: true }
+        },
+        provider: {
+          select: { id: true, firstName: true, lastName: true, email: true }
+        }
+      }
+    });
+
+    return invoice;
+  } catch (error: any) {
+    console.error('Generate invoice after consultation error:', error);
+    throw error;
+  }
+};
+
 // Get invoices
 export const getInvoices = async (req: AuthRequest, res: Response) => {
   try {
