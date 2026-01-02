@@ -3,9 +3,7 @@
  * Utility to retrieve and apply configurable policies
  */
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from './prisma';
 
 export enum PolicyType {
   DATA_RETENTION = 'DATA_RETENTION',
