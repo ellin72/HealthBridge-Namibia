@@ -15,6 +15,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    profiles:
+      - local
+      - production
 
   backend:
     build:
@@ -38,6 +41,18 @@ services:
       - ./backend:/app
       - /app/node_modules
       - ./backend/uploads:/app/uploads
+    profiles:
+      - local
+      - production
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   frontend:
     build:
@@ -53,6 +68,60 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    profiles:
+      - local
+      - production
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # Production scaling profile
+  backend-prod:
+    extends: backend
+    container_name: healthbridge-api-prod
+    environment:
+      NODE_ENV: production
+    profiles:
+      - production
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # Load testing profile
+  postgres-load:
+    extends: postgres
+    container_name: healthbridge-db-load
+    profiles:
+      - load-test
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+  backend-load:
+    extends: backend
+    container_name: healthbridge-api-load
+    profiles:
+      - load-test
+    deploy:
+      replicas: 5
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
 
 volumes:
   postgres_data:

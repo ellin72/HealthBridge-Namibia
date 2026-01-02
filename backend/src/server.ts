@@ -28,6 +28,10 @@ import monitoringRoutes from './routes/monitoring';
 import providerFeeRoutes from './routes/providerFees';
 import providerEarningsRoutes from './routes/providerEarnings';
 import adminMonitoringRoutes from './routes/adminMonitoring';
+import surveyRoutes from './routes/surveys';
+import feedbackRoutes from './routes/feedback';
+import policyRoutes from './routes/policies';
+import { apiMonitoring } from './middleware/apiMonitoring';
 
 // Load environment variables
 dotenv.config();
@@ -46,6 +50,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(morgan('combined'));
+app.use(apiMonitoring); // API monitoring middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -80,6 +85,9 @@ app.use('/api/monitoring', monitoringRoutes);
 app.use('/api/provider-fees', providerFeeRoutes);
 app.use('/api/provider-earnings', providerEarningsRoutes);
 app.use('/api/admin', adminMonitoringRoutes);
+app.use('/api/surveys', surveyRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/policies', policyRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
