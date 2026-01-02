@@ -18,9 +18,9 @@ const router = express.Router();
 router.post('/', submitFeedback);
 
 // Protected routes
-// IMPORTANT: Specific routes must come before dynamic routes to ensure correct matching
-router.get('/', authenticate, getFeedback);
-router.get('/stats', authenticate, getFeedbackStats); // Must come before /:id
+// IMPORTANT: Specific routes must come before general and dynamic routes to ensure correct matching
+router.get('/stats', authenticate, getFeedbackStats); // Specific route must come before general /
+router.get('/', authenticate, getFeedback); // General route
 router.get('/:id', authenticate, getFeedbackById); // Dynamic route must come last
 router.patch('/:id/status', authenticate, updateFeedbackStatus);
 

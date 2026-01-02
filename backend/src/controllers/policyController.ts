@@ -6,6 +6,7 @@
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma';
+import { PolicyType } from '../utils/policyEngine';
 
 /**
  * Create a new policy
@@ -136,11 +137,20 @@ export const getPolicies = async (req: Request, res: Response) => {
 export const getActivePolicy = async (req: Request, res: Response) => {
   try {
     const { policyType } = req.params;
+    
+    // Validate policyType against PolicyType enum
+    if (!Object.values(PolicyType).includes(policyType as PolicyType)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid policy type. Valid types are: ${Object.values(PolicyType).join(', ')}`
+      });
+    }
+    
     const now = new Date();
 
     const policy = await prisma.policy.findFirst({
       where: {
-        policyType: policyType as any,
+        policyType: policyType as PolicyType,
         isActive: true,
         effectiveDate: { lte: now },
         OR: [

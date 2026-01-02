@@ -16,7 +16,8 @@ import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
-// Public routes
+// Public routes (must come before dynamic protected routes to ensure correct matching)
+// Note: /public/:id is a two-segment route, but should come before /:id to avoid any potential conflicts
 router.get('/public/:id', getSurveyById);
 router.post('/public/:id/responses', submitSurveyResponse);
 

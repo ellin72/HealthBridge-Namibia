@@ -29,11 +29,44 @@ export async function processSyncQueueEnhanced(userId: string, batchSize: number
   failed: number;
   results: any[];
 }> {
-  const queueItems = await prisma.offlineSyncQueue.findMany({
+  // First, handle orphaned items: mark PROCESSING items as PENDING for retry, and mark PENDING items with retryCount >= 5 as FAILED
+  const processingTimeout = 5 * 60 * 1000; // 5 minutes - items stuck in PROCESSING longer than this are considered orphaned
+  const timeoutThreshold = new Date(Date.now() - processingTimeout);
+  
+  await Promise.all([
+    // Reset any items stuck in PROCESSING status for more than 5 minutes back to PENDING (they may have been interrupted)
+    // Only reset items that have been PROCESSING for a while to avoid interfering with active processing
+    prisma.offlineSyncQueue.updateMany({
+      where: {
+        userId,
+        status: 'PROCESSING',
+        synced: false,
+        updatedAt: { lt: timeoutThreshold } // Only reset items that haven't been updated recently
+      },
+      data: {
+        status: 'PENDING'
+      }
+    }),
+    // Mark any PENDING items with retryCount >= 5 as FAILED (they should have been marked as FAILED but weren't due to race conditions)
+    prisma.offlineSyncQueue.updateMany({
+      where: {
+        userId,
+        status: 'PENDING',
+        synced: false,
+        retryCount: { gte: 5 }
+      },
+      data: {
+        status: 'FAILED'
+      }
+    })
+  ]);
+
+  // Fetch candidate items to process: PENDING status with retryCount < 5
+  const candidateItems = await prisma.offlineSyncQueue.findMany({
     where: {
       userId,
       synced: false,
-      status: 'PENDING', // Only process pending items (PROCESSING status is not currently used)
+      status: 'PENDING',
       retryCount: { lt: 5 } // Max 5 retries
     },
     orderBy: [
@@ -43,12 +76,50 @@ export async function processSyncQueueEnhanced(userId: string, batchSize: number
     take: batchSize
   });
 
+  if (candidateItems.length === 0) {
+    return {
+      processed: 0,
+      successful: 0,
+      failed: 0,
+      results: []
+    };
+  }
+
+  // Atomically mark items as PROCESSING only if they're still PENDING (prevents race conditions)
+  // This ensures only one process can claim an item for processing
+  const itemIds = candidateItems.map(item => item.id);
+  await prisma.offlineSyncQueue.updateMany({
+    where: {
+      id: { in: itemIds },
+      status: 'PENDING', // Only update if still PENDING (atomic check prevents race conditions)
+      synced: false
+    },
+    data: {
+      status: 'PROCESSING'
+    }
+  });
+
+  // Re-fetch only items that are now PROCESSING to see which ones we successfully claimed
+  // Items claimed by other processes will have a different status
+  const queueItems = await prisma.offlineSyncQueue.findMany({
+    where: {
+      id: { in: itemIds },
+      status: 'PROCESSING', // Only process items we successfully claimed
+      synced: false
+    },
+    orderBy: [
+      { retryCount: 'asc' },
+      { createdAt: 'asc' }
+    ]
+  });
+
   const results = [];
   let successful = 0;
   let failed = 0;
 
   for (const item of queueItems) {
     try {
+
       const payload = JSON.parse(item.payload);
       
       // Process based on entity type with enhanced error handling
@@ -242,11 +313,11 @@ async function syncMonitoringDataEnhanced(action: string, payload: any, userId: 
  */
 export async function getEnhancedSyncQueueStatus(userId: string) {
   const [pending, synced, failed, byEntityType, byAction] = await Promise.all([
-    // Pending items: not synced, not failed, retry count < 5
+    // Pending items: PENDING or PROCESSING status, not synced, not failed, retry count < 5
     prisma.offlineSyncQueue.count({
       where: { 
         userId, 
-        status: 'PENDING',
+        status: { in: ['PENDING', 'PROCESSING'] },
         synced: false,
         retryCount: { lt: 5 }
       }
@@ -275,6 +346,7 @@ export async function getEnhancedSyncQueueStatus(userId: string) {
         userId, 
         OR: [
           { status: 'PENDING' },
+          { status: 'PROCESSING' },
           { status: 'FAILED' }
         ]
       },
@@ -286,6 +358,7 @@ export async function getEnhancedSyncQueueStatus(userId: string) {
         userId, 
         OR: [
           { status: 'PENDING' },
+          { status: 'PROCESSING' },
           { status: 'FAILED' }
         ]
       },

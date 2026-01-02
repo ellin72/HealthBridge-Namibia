@@ -7,7 +7,7 @@ interface FeedbackFormProps {
 }
 
 const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel }) => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [formData, setFormData] = useState({
     feedbackType: 'GENERAL',
     category: '',
@@ -44,7 +44,7 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(user?.token && { Authorization: `Bearer ${user.token}` })
+          ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify(formData)
       });
