@@ -667,6 +667,13 @@ model Payment {
   @@index([createdAt])
 }
 
+enum SyncQueueStatus {
+  PENDING
+  PROCESSING
+  SYNCED
+  FAILED
+}
+
 model OfflineSyncQueue {
   id              String          @id @default(uuid())
   userId          String
@@ -675,6 +682,7 @@ model OfflineSyncQueue {
   entityId        String?
   payload         String          // JSON data
   synced          Boolean         @default(false)
+  status          SyncQueueStatus @default(PENDING)
   syncedAt        DateTime?
   error           String?
   retryCount      Int             @default(0)
@@ -685,6 +693,7 @@ model OfflineSyncQueue {
 
   @@index([userId])
   @@index([synced])
+  @@index([status])
   @@index([createdAt])
 }
 

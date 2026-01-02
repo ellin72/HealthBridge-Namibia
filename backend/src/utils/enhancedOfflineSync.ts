@@ -35,6 +35,7 @@ export async function processSyncQueueEnhanced(userId: string, batchSize: number
     where: {
       userId,
       synced: false,
+      status: { in: ['PENDING', 'PROCESSING'] }, // Only process pending/processing items
       retryCount: { lt: 5 } // Max 5 retries
     },
     orderBy: [
@@ -79,6 +80,7 @@ export async function processSyncQueueEnhanced(userId: string, batchSize: number
         where: { id: item.id },
         data: {
           synced: true,
+          status: 'SYNCED',
           syncedAt: new Date(),
           error: null
         }
@@ -89,14 +91,16 @@ export async function processSyncQueueEnhanced(userId: string, batchSize: number
     } catch (error: any) {
       // Update retry count
       const newRetryCount = item.retryCount + 1;
-      // Keep synced: false even after max retries so failed items can be tracked
-      // Failed items should remain synced: false to be queryable in status tracking
+      const isFailed = newRetryCount >= 5;
+      
+      // Update status: mark as FAILED after max retries, otherwise keep as PENDING
       await prisma.offlineSyncQueue.update({
         where: { id: item.id },
         data: {
           retryCount: newRetryCount,
           error: error.message,
-          synced: false // Keep as false so failed items can be tracked
+          synced: false, // Keep as false for failed items so they remain queryable
+          status: isFailed ? 'FAILED' : 'PENDING' // Use status field to distinguish pending from failed
         }
       });
 
@@ -240,23 +244,53 @@ async function syncMonitoringDataEnhanced(action: string, payload: any, userId: 
  */
 export async function getEnhancedSyncQueueStatus(userId: string) {
   const [pending, synced, failed, byEntityType, byAction] = await Promise.all([
+    // Pending items: not synced, not failed, retry count < 5
     prisma.offlineSyncQueue.count({
-      where: { userId, synced: false, retryCount: { lt: 5 } }
+      where: { 
+        userId, 
+        status: 'PENDING',
+        synced: false,
+        retryCount: { lt: 5 }
+      }
     }),
+    // Synced items: successfully synced
     prisma.offlineSyncQueue.count({
-      where: { userId, synced: true }
+      where: { 
+        userId, 
+        status: 'SYNCED',
+        synced: true 
+      }
     }),
+    // Failed items: exhausted retries (status = FAILED or retryCount >= 5)
     prisma.offlineSyncQueue.count({
-      where: { userId, synced: false, retryCount: { gte: 5 } }
+      where: { 
+        userId, 
+        OR: [
+          { status: 'FAILED' },
+          { synced: false, retryCount: { gte: 5 } }
+        ]
+      }
     }),
     prisma.offlineSyncQueue.groupBy({
       by: ['entityType'],
-      where: { userId, synced: false },
+      where: { 
+        userId, 
+        OR: [
+          { status: 'PENDING' },
+          { status: 'FAILED' }
+        ]
+      },
       _count: true
     }),
     prisma.offlineSyncQueue.groupBy({
       by: ['action'],
-      where: { userId, synced: false },
+      where: { 
+        userId, 
+        OR: [
+          { status: 'PENDING' },
+          { status: 'FAILED' }
+        ]
+      },
       _count: true
     })
   ]);

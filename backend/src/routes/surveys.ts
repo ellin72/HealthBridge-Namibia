@@ -21,11 +21,12 @@ router.get('/public/:id', getSurveyById);
 router.post('/public/:id/responses', submitSurveyResponse);
 
 // Protected routes (require authentication)
+// IMPORTANT: Specific routes must come before dynamic routes to ensure correct matching
 router.post('/', authenticate, createSurvey);
 router.get('/', authenticate, getSurveys);
-router.get('/:id', authenticate, getSurveyById);
+router.get('/metrics/adoption', authenticate, getAdoptionMetrics); // Must come before /:id
 router.get('/:id/responses', authenticate, getSurveyResponses);
-router.get('/metrics/adoption', authenticate, getAdoptionMetrics);
+router.get('/:id', authenticate, getSurveyById); // Dynamic route must come last
 router.patch('/:id/status', authenticate, updateSurveyStatus);
 
 export default router;
