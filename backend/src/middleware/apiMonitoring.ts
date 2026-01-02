@@ -179,7 +179,7 @@ function groupBy<T>(array: T[], key: keyof T): Record<string, number> {
  */
 export const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch((error) => {
+    return Promise.resolve(fn(req, res, next)).catch((error) => {
       // Pass error to next() so it can be caught by error-handling middleware
       next(error);
     });

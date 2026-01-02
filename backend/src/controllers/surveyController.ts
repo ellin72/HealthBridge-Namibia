@@ -131,7 +131,8 @@ export const submitSurveyResponse = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { responses, metadata } = req.body;
-    const userId = (req as any).user?.id;
+    // Normalize userId to null if undefined (for public routes without authentication)
+    const userId = (req as any).user?.id ?? null;
 
     // Check if survey exists and is active
     const survey = await prisma.survey.findUnique({
@@ -157,6 +158,14 @@ export const submitSurveyResponse = async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         message: 'Survey has ended'
+      });
+    }
+
+    // Validate: non-anonymous surveys require authentication
+    if (!survey.isAnonymous && !userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required for non-anonymous surveys'
       });
     }
 
