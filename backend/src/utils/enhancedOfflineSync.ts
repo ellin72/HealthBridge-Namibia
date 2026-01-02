@@ -89,12 +89,14 @@ export async function processSyncQueueEnhanced(userId: string, batchSize: number
     } catch (error: any) {
       // Update retry count
       const newRetryCount = item.retryCount + 1;
+      // Keep synced: false even after max retries so failed items can be tracked
+      // Failed items should remain synced: false to be queryable in status tracking
       await prisma.offlineSyncQueue.update({
         where: { id: item.id },
         data: {
           retryCount: newRetryCount,
           error: error.message,
-          synced: newRetryCount >= 5 // Mark as failed after max retries
+          synced: false // Keep as false so failed items can be tracked
         }
       });
 
