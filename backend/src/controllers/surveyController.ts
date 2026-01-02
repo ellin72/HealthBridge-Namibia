@@ -179,12 +179,31 @@ export const submitSurveyResponse = async (req: Request, res: Response) => {
       }
     });
 
+    // Parse JSON responses and metadata with error handling
+    let parsedResponses;
+    let parsedMetadata = null;
+    try {
+      parsedResponses = JSON.parse(response.responses);
+    } catch (error) {
+      console.error('Failed to parse survey response JSON:', error);
+      throw new Error('Failed to parse response data - invalid JSON format');
+    }
+    
+    if (response.metadata) {
+      try {
+        parsedMetadata = JSON.parse(response.metadata);
+      } catch (error) {
+        console.warn('Failed to parse survey response metadata JSON:', error);
+        // Metadata is optional, so we continue without it
+      }
+    }
+
     res.status(201).json({
       success: true,
       data: {
         ...response,
-        responses: JSON.parse(response.responses),
-        metadata: response.metadata ? JSON.parse(response.metadata) : null
+        responses: parsedResponses,
+        metadata: parsedMetadata
       }
     });
   } catch (error: any) {
@@ -213,11 +232,24 @@ export const getSurveyResponses = async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: responses.map(response => ({
-        ...response,
-        responses: JSON.parse(response.responses),
-        metadata: response.metadata ? JSON.parse(response.metadata) : null
-      }))
+      data: responses.map(response => {
+        try {
+          return {
+            ...response,
+            responses: JSON.parse(response.responses),
+            metadata: response.metadata ? JSON.parse(response.metadata) : null
+          };
+        } catch (error) {
+          // Return response with error indicator for malformed JSON
+          console.warn('Failed to parse survey response JSON:', error);
+          return {
+            ...response,
+            responses: null,
+            metadata: null,
+            parseError: 'Failed to parse response data'
+          };
+        }
+      })
     });
   } catch (error: any) {
     res.status(500).json({
@@ -267,10 +299,15 @@ export const getAdoptionMetrics = async (req: Request, res: Response) => {
     let totalRating = 0;
     let ratingCount = 0;
     ratingResponses.forEach(response => {
-      const data = JSON.parse(response.responses);
-      if (data.rating) {
-        totalRating += Number(data.rating);
-        ratingCount++;
+      try {
+        const data = JSON.parse(response.responses);
+        if (data.rating) {
+          totalRating += Number(data.rating);
+          ratingCount++;
+        }
+      } catch (error) {
+        // Skip malformed JSON responses - log error but don't fail the entire request
+        console.warn('Failed to parse survey response JSON:', error);
       }
     });
 

@@ -86,7 +86,17 @@ services:
     extends: backend
     container_name: healthbridge-api-prod
     environment:
+      # Override all environment variables for production
+      # IMPORTANT: These should be set from environment variables or secrets manager in real production
+      # For now, using placeholders that must be overridden via .env or docker-compose override files
+      # WARNING: Default values below are placeholders and MUST be changed for production deployment
+      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql://healthbridge:CHANGE_ME_DB_PASSWORD@postgres:5432/healthbridge?schema=public}
+      JWT_SECRET: ${PROD_JWT_SECRET:-CHANGE_ME_PRODUCTION_JWT_SECRET}
+      JWT_EXPIRES_IN: ${PROD_JWT_EXPIRES_IN:-7d}
+      PORT: 5000
       NODE_ENV: production
+      FRONTEND_URL: ${PROD_FRONTEND_URL:-https://healthbridge.namibia.org}
+      MOBILE_URL: ${PROD_MOBILE_URL:-https://mobile.healthbridge.namibia.org}
     profiles:
       - production
     # Explicitly override ports to avoid conflicts if profiles are misconfigured
