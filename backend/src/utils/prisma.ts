@@ -5,7 +5,8 @@
 
 import { PrismaClient } from '@prisma/client';
 
-// Prevent multiple instances in development (hot reload)
+// Prevent multiple instances across all environments (including production)
+// This ensures a single PrismaClient instance is shared across all module imports
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
@@ -14,7 +15,8 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
+// Cache the instance in all environments to ensure singleton pattern
+// In production, this prevents multiple PrismaClient instances from being created
+// when different modules import from this file
+globalForPrisma.prisma = prisma;
 

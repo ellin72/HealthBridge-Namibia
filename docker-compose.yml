@@ -89,8 +89,11 @@ services:
       NODE_ENV: production
     profiles:
       - production
-    # Ports are inherited from backend (5000:5000)
-    # This is safe since backend is not in production profile, avoiding port conflicts
+    # Explicitly override ports to avoid conflicts if profiles are misconfigured
+    # Note: backend service is in 'local' profile only, backend-prod is in 'production' profile only
+    # They are mutually exclusive, but explicit port override prevents accidental conflicts
+    ports:
+      - "5000:5000"
     deploy:
       replicas: 3
       resources:
