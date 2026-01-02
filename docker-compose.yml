@@ -43,7 +43,7 @@ services:
       - ./backend/uploads:/app/uploads
     profiles:
       - local
-      - production
+      # Note: backend-prod is used for production profile, not this service
     deploy:
       replicas: 1
       resources:
@@ -89,6 +89,8 @@ services:
       NODE_ENV: production
     profiles:
       - production
+    # Ports are inherited from backend (5000:5000)
+    # This is safe since backend is not in production profile, avoiding port conflicts
     deploy:
       replicas: 3
       resources:

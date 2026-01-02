@@ -35,7 +35,7 @@ export async function processSyncQueueEnhanced(userId: string, batchSize: number
     where: {
       userId,
       synced: false,
-      status: { in: ['PENDING', 'PROCESSING'] }, // Only process pending/processing items
+      status: 'PENDING', // Only process pending items (PROCESSING status is not currently used)
       retryCount: { lt: 5 } // Max 5 retries
     },
     orderBy: [
@@ -128,7 +128,7 @@ async function syncAppointmentEnhanced(action: string, payload: any, userId: str
         where: {
           patientId: userId,
           providerId: payload.providerId,
-          scheduledAt: new Date(payload.scheduledAt)
+          appointmentDate: payload.appointmentDate ? new Date(payload.appointmentDate) : undefined
         }
       });
 
