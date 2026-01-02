@@ -3,9 +3,7 @@
  * Supports Email, SMS, and In-App notifications
  */
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from './prisma';
 
 export interface ReceiptData {
   invoiceNumber: string;

@@ -1,8 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient, AppointmentStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { AppointmentStatus } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
 export const createAppointment = async (req: AuthRequest, res: Response) => {
   try {

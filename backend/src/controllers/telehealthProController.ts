@@ -1,8 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient, VideoProvider } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { VideoProvider } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
 // ========== VIDEO CONSULTATIONS ==========
 

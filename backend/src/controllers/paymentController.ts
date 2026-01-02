@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { PaymentMethod, PaymentStatus } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { paymentGateway } from '../utils/paymentGateway';
 import { analyzePaymentForFraud, logFraudCheck } from '../utils/fraudDetection';
@@ -7,8 +8,6 @@ import { is2FAEnabled, verify2FAToken } from '../utils/twoFactorAuth';
 import { encryptCardToken, maskCardNumber } from '../utils/financialEncryption';
 import { sendPaymentConfirmation, sendReceiptEmail, sendReceiptSMS } from '../utils/notificationService';
 import { generateReceipt } from '../utils/receiptGenerator';
-
-const prisma = new PrismaClient();
 
 // Create payment with fraud detection and 2FA
 export const createPayment = async (req: AuthRequest, res: Response) => {

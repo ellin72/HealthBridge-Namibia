@@ -58,8 +58,11 @@ export const createPolicy = async (req: Request, res: Response) => {
           if (retries >= maxRetries) {
             throw new Error('Failed to create policy after multiple retries due to concurrent requests');
           }
-          // Wait a small random amount before retrying to reduce collision probability
-          await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+          // Exponential backoff with jitter: 2^retries * 50ms base + random 0-50ms
+          // This prevents thundering herd while ensuring eventual success
+          const baseDelay = Math.pow(2, retries) * 50;
+          const jitter = Math.random() * 50;
+          await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));
           continue;
         }
         // If it's not a unique constraint error, throw immediately

@@ -1,10 +1,8 @@
 import crypto from 'crypto';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma';
 import { encryptFinancialData, decryptFinancialData } from './financialEncryption';
-
-const prisma = new PrismaClient();
 
 /**
  * Two-Factor Authentication for Payment Approvals

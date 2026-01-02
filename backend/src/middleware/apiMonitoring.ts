@@ -36,7 +36,8 @@ export const apiMonitoring = (req: Request, res: Response, next: NextFunction) =
   const originalEnd = res.end.bind(res);
 
   // Override end function to capture metrics
-  res.end = function(chunk?: any, encoding?: any, cb?: () => void): Response {
+  // Handle all possible signatures: end(), end(cb), end(chunk, cb), end(chunk, encoding, cb)
+  res.end = function(chunk?: any, encoding?: any, cb?: any): Response {
     const responseTime = Date.now() - startTime;
     const userId = (req as any).user?.id;
 
@@ -67,7 +68,12 @@ export const apiMonitoring = (req: Request, res: Response, next: NextFunction) =
     // Alert on high error rate or slow responses
     checkAlerts(metric);
 
-    // Call original end and return the result
+    // Handle different calling patterns correctly
+    // If encoding is a function, it's actually the callback
+    if (typeof encoding === 'function') {
+      return originalEnd(chunk, encoding);
+    }
+    // Otherwise, use all three parameters
     return originalEnd(chunk, encoding, cb);
   };
 

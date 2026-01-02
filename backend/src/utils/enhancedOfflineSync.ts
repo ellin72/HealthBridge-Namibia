@@ -61,6 +61,17 @@ export async function processSyncQueueEnhanced(userId: string, batchSize: number
     })
   ]);
 
+  // First, migrate any items with null status to PENDING (for existing records before status field was added)
+  await prisma.offlineSyncQueue.updateMany({
+    where: {
+      userId,
+      status: null
+    },
+    data: {
+      status: 'PENDING'
+    }
+  });
+
   // Fetch candidate items to process: PENDING status with retryCount < 5
   const candidateItems = await prisma.offlineSyncQueue.findMany({
     where: {

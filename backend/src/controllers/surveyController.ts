@@ -169,34 +169,49 @@ export const submitSurveyResponse = async (req: Request, res: Response) => {
       });
     }
 
-    // Create response
+    // Validate JSON before database insertion
+    let responsesJson: string;
+    let metadataJson: string | null = null;
+    
+    try {
+      // Validate that responses can be stringified (ensures it's valid JSON-serializable data)
+      responsesJson = JSON.stringify(responses);
+      // Verify it can be parsed back (double-check)
+      JSON.parse(responsesJson);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid responses format - must be valid JSON',
+        error: error instanceof Error ? error.message : 'JSON validation failed'
+      });
+    }
+    
+    if (metadata) {
+      try {
+        metadataJson = JSON.stringify(metadata);
+        JSON.parse(metadataJson);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid metadata format - must be valid JSON',
+          error: error instanceof Error ? error.message : 'JSON validation failed'
+        });
+      }
+    }
+
+    // Create response (JSON is already validated)
     const response = await prisma.surveyResponse.create({
       data: {
         surveyId: id,
         userId: survey.isAnonymous ? null : userId,
-        responses: JSON.stringify(responses),
-        metadata: metadata ? JSON.stringify(metadata) : null
+        responses: responsesJson,
+        metadata: metadataJson
       }
     });
 
-    // Parse JSON responses and metadata with error handling
-    let parsedResponses;
-    let parsedMetadata = null;
-    try {
-      parsedResponses = JSON.parse(response.responses);
-    } catch (error) {
-      console.error('Failed to parse survey response JSON:', error);
-      throw new Error('Failed to parse response data - invalid JSON format');
-    }
-    
-    if (response.metadata) {
-      try {
-        parsedMetadata = JSON.parse(response.metadata);
-      } catch (error) {
-        console.warn('Failed to parse survey response metadata JSON:', error);
-        // Metadata is optional, so we continue without it
-      }
-    }
+    // Parse JSON responses and metadata (already validated, so this should never fail)
+    const parsedResponses = JSON.parse(response.responses);
+    const parsedMetadata = response.metadata ? JSON.parse(response.metadata) : null;
 
     res.status(201).json({
       success: true,
@@ -362,4 +377,5 @@ export const updateSurveyStatus = async (req: Request, res: Response) => {
     });
   }
 };
+
 

@@ -17,14 +17,17 @@
     "migrate:docker:dev": "node run-migration-wrapper.js migrate-dev-docker",
     "migrate:deploy": "docker-compose exec -T backend sh -c \"cd /app; npx prisma migrate deploy; npx prisma generate\"",
     "migrate:dev": "docker-compose exec -T backend sh -c \"cd /app; npx prisma migrate dev\"",
-    "dev:docker": "bash dev-docker.sh"
+    "dev:docker": "bash dev-docker.sh",
+    "test:routes": "node ../tests/route-tests.js"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
+    "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
+    "colors": "^1.4.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",

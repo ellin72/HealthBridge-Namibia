@@ -1,9 +1,7 @@
 // FHIR (Fast Healthcare Interoperability Resources) utilities
 // This provides interoperability with legacy hospital information systems
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from './prisma';
 
 // Convert Patient to FHIR Patient resource
 export function patientToFHIR(patient: any) {

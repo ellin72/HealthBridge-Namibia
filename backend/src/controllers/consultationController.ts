@@ -1,9 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { generateInvoiceAfterConsultation } from './billingController';
-
-const prisma = new PrismaClient();
 
 export const createConsultationNote = async (req: AuthRequest, res: Response) => {
   try {

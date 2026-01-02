@@ -1,10 +1,9 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient, AssignmentStatus } from '@prisma/client';
+import { AssignmentStatus } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import path from 'path';
 import fs from 'fs';
-
-const prisma = new PrismaClient();
 
 // Learning Resources
 export const uploadLearningResource = async (req: AuthRequest, res: Response) => {
