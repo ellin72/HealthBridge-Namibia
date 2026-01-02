@@ -3,10 +3,8 @@
  * Handles rural deployments with improved sync capabilities
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma';
 import { addToSyncQueue, processOfflineSyncQueue, getSyncQueueStatus } from './offlineSync';
-
-const prisma = new PrismaClient();
 
 export interface SyncQueueItem {
   id: string;

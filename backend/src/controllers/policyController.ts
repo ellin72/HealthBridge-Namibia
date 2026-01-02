@@ -4,39 +4,71 @@
  */
 
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Prisma } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
 /**
  * Create a new policy
+ * Uses transaction with retry logic to handle race conditions
  */
 export const createPolicy = async (req: Request, res: Response) => {
   try {
     const { policyType, name, description, policyData, effectiveDate, expirationDate } = req.body;
     const userId = (req as any).user?.id;
 
-    // Get latest version for this policy type
-    const latestPolicy = await prisma.policy.findFirst({
-      where: { policyType },
-      orderBy: { version: 'desc' }
-    });
+    // Use transaction with retry logic to handle concurrent policy creation
+    const maxRetries = 5;
+    let retries = 0;
+    let policy;
 
-    const newVersion = latestPolicy ? latestPolicy.version + 1 : 1;
+    while (retries < maxRetries) {
+      try {
+        policy = await prisma.$transaction(async (tx) => {
+          // Get latest version for this policy type within transaction
+          const latestPolicy = await tx.policy.findFirst({
+            where: { policyType },
+            orderBy: { version: 'desc' }
+          });
 
-    const policy = await prisma.policy.create({
-      data: {
-        policyType,
-        name,
-        description,
-        policyData: JSON.stringify(policyData),
-        version: newVersion,
-        effectiveDate: effectiveDate ? new Date(effectiveDate) : new Date(),
-        expirationDate: expirationDate ? new Date(expirationDate) : null,
-        createdBy: userId,
-        updatedBy: userId
+          const newVersion = latestPolicy ? latestPolicy.version + 1 : 1;
+
+          // Attempt to create policy - will fail if unique constraint violated
+          return await tx.policy.create({
+            data: {
+              policyType,
+              name,
+              description,
+              policyData: JSON.stringify(policyData),
+              version: newVersion,
+              effectiveDate: effectiveDate ? new Date(effectiveDate) : new Date(),
+              expirationDate: expirationDate ? new Date(expirationDate) : null,
+              createdBy: userId,
+              updatedBy: userId
+            }
+          });
+        });
+
+        // Success - break out of retry loop
+        break;
+      } catch (error: any) {
+        // Check if it's a unique constraint violation (race condition)
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          retries++;
+          if (retries >= maxRetries) {
+            throw new Error('Failed to create policy after multiple retries due to concurrent requests');
+          }
+          // Wait a small random amount before retrying to reduce collision probability
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+          continue;
+        }
+        // If it's not a unique constraint error, throw immediately
+        throw error;
       }
-    });
+    }
+
+    if (!policy) {
+      throw new Error('Failed to create policy');
+    }
 
     res.status(201).json({
       success: true,
@@ -46,6 +78,15 @@ export const createPolicy = async (req: Request, res: Response) => {
       }
     });
   } catch (error: any) {
+    // Handle unique constraint violation with appropriate status code
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({
+        success: false,
+        message: 'Policy version conflict. Please try again.',
+        error: 'A policy with this type and version already exists'
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Failed to create policy',

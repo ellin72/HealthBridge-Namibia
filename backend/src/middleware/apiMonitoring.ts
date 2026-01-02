@@ -35,10 +35,10 @@ export const apiMonitoring = (req: Request, res: Response, next: NextFunction) =
   (req as any).requestId = requestId;
 
   // Capture original end function
-  const originalEnd = res.end;
+  const originalEnd = res.end.bind(res);
 
   // Override end function to capture metrics
-  res.end = function(chunk?: any, encoding?: any) {
+  res.end = function(chunk?: any, encoding?: any, cb?: () => void): Response {
     const responseTime = Date.now() - startTime;
     const userId = (req as any).user?.id;
 
@@ -69,8 +69,8 @@ export const apiMonitoring = (req: Request, res: Response, next: NextFunction) =
     // Alert on high error rate or slow responses
     checkAlerts(metric);
 
-    // Call original end
-    originalEnd.call(this, chunk, encoding);
+    // Call original end and return the result
+    return originalEnd(chunk, encoding, cb);
   };
 
   next();
@@ -176,15 +176,32 @@ function groupBy<T>(array: T[], key: keyof T): Record<string, number> {
 }
 
 /**
- * Fallback middleware for critical endpoints
+ * Async handler wrapper to catch errors from async route handlers
+ * Use this to wrap async route handlers to properly catch and forward errors
+ */
+export const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch((error) => {
+      // Pass error to next() so it can be caught by error-handling middleware
+      next(error);
+    });
+  };
+};
+
+/**
+ * Fallback error-handling middleware for critical endpoints
+ * This is an Express error-handling middleware (4 parameters) that catches errors
+ * passed via next(error) from route handlers
  */
 export const fallbackMiddleware = (fallbackHandler: (req: Request, res: Response) => void) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      next();
-    } catch (error) {
-      console.error('Error in request, using fallback:', error);
+  return (err: any, req: Request, res: Response, next: NextFunction) => {
+    console.error('Error in request, using fallback:', err);
+    // Only use fallback if response hasn't been sent
+    if (!res.headersSent) {
       fallbackHandler(req, res);
+    } else {
+      // If response already sent, pass to next error handler
+      next(err);
     }
   };
 };

@@ -77,12 +77,11 @@ Reference: ${request.reference}`;
 
   async refundPayment(transactionId: string, amount?: number): Promise<RefundResponse> {
     try {
-      // Bank transfers require manual processing, so we return success but with a note in status
+      // Bank transfers require manual processing, so we return failure with clear message
       return {
-        success: true,
-        refundId: `REF-${Date.now()}`,
-        amount: amount,
-        status: 'PROCESSING - Manual processing required'
+        success: false,
+        error: 'Bank transfer refunds require manual processing. Please contact support to initiate the refund.',
+        status: 'REQUIRES_MANUAL_PROCESSING'
       };
     } catch (error: any) {
       return {

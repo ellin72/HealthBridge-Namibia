@@ -3,9 +3,7 @@
  * Logs all payment transactions for audit trails
  */
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../src/utils/prisma';
 
 export interface TransactionLogData {
   transactionType: string;
