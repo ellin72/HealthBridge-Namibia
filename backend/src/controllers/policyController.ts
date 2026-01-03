@@ -78,10 +78,6 @@ export const createPolicy = async (req: Request, res: Response) => {
       throw new Error('Failed to create policy after multiple retries due to concurrent requests');
     }
 
-    if (!policy) {
-      throw new Error('Failed to create policy');
-    }
-
     res.status(201).json({
       success: true,
       data: {

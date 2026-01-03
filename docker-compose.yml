@@ -157,7 +157,7 @@ services:
       dockerfile: Dockerfile
     # Note: container_name removed because deploy.replicas requires auto-generated names
     environment:
-      DATABASE_URL: postgresql://healthbridge:healthbridge123@postgres:5432/healthbridge?schema=public
+      DATABASE_URL: postgresql://healthbridge:healthbridge123@postgres-load:5432/healthbridge?schema=public
       JWT_SECRET: development-secret-key-change-in-production
       JWT_EXPIRES_IN: 7d
       PORT: 5000
@@ -167,7 +167,7 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      postgres:
+      postgres-load:
         condition: service_healthy
     volumes:
       - ./backend:/app
