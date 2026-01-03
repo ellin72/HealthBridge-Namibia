@@ -413,7 +413,9 @@ export const getAdoptionMetrics = async (req: Request, res: Response) => {
     ratingResponses.forEach(response => {
       try {
         const data = JSON.parse(response.responses);
-        if (data.rating) {
+        // Explicitly check for null/undefined to handle numeric zero values correctly
+        // A rating of 0 is a valid rating and should be included in the average
+        if (data.rating !== undefined && data.rating !== null) {
           totalRating += Number(data.rating);
           ratingCount++;
         }

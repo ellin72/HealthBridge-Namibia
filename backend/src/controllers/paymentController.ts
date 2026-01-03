@@ -273,8 +273,22 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
       });
       
       // Process the pending callback asynchronously (don't block the response)
-      processPendingCallback(payment.id, pendingCallback).catch(error => {
-        console.error('Error processing pending callback:', error);
+      // Use setImmediate to ensure it runs after the response is sent, but still track errors
+      setImmediate(async () => {
+        try {
+          await processPendingCallback(payment.id, pendingCallback);
+        } catch (error: any) {
+          // Log error with payment context for debugging
+          console.error(`Error processing pending callback for payment ${payment.id}:`, {
+            error: error.message,
+            stack: error.stack,
+            paymentReference: payment.paymentReference,
+            transactionId: payment.transactionId,
+            callbackStatus: pendingCallback.status
+          });
+          // Note: We don't throw here to avoid unhandled promise rejection
+          // The payment record exists, so the callback can be retried by the gateway
+        }
       });
     }
 
@@ -472,32 +486,50 @@ export const processPaymentCallback = async (req: Request, res: Response) => {
       
       // Try to find payment again after a short delay (in case it was just created)
       // This handles the race condition where payment is created between our check and now
-      setTimeout(async () => {
-        try {
-          let retryPayment = null;
-          if (paymentReference) {
-            retryPayment = await prisma.payment.findFirst({
-              where: { paymentReference },
-              include: { invoice: { include: { patient: true, provider: true } } }
-            });
-          } else if (transactionId) {
-            retryPayment = await prisma.payment.findFirst({
-              where: { transactionId },
-              include: { invoice: { include: { patient: true, provider: true } } }
-            });
-          }
-
-          if (retryPayment) {
-            console.log(`Found payment on retry, processing pending callback: ${retryPayment.id}`);
-            const pendingCallback = getPendingCallback(paymentReference, transactionId);
-            if (pendingCallback) {
-              await processPendingCallback(retryPayment.id, pendingCallback);
+      // Use setImmediate + setTimeout to ensure proper async handling
+      setImmediate(() => {
+        setTimeout(async () => {
+          try {
+            let retryPayment = null;
+            if (paymentReference) {
+              retryPayment = await prisma.payment.findFirst({
+                where: { paymentReference },
+                include: { invoice: { include: { patient: true, provider: true } } }
+              });
+            } else if (transactionId) {
+              retryPayment = await prisma.payment.findFirst({
+                where: { transactionId },
+                include: { invoice: { include: { patient: true, provider: true } } }
+              });
             }
+
+            if (retryPayment) {
+              console.log(`Found payment on retry, processing pending callback: ${retryPayment.id}`);
+              const pendingCallback = getPendingCallback(paymentReference, transactionId);
+              if (pendingCallback) {
+                try {
+                  await processPendingCallback(retryPayment.id, pendingCallback);
+                } catch (error: any) {
+                  console.error(`Error processing pending callback on retry for payment ${retryPayment.id}:`, {
+                    error: error.message,
+                    stack: error.stack,
+                    paymentReference,
+                    transactionId
+                  });
+                  // Don't throw - let gateway retry mechanism handle it
+                }
+              }
+            }
+          } catch (error: any) {
+            console.error('Error retrying payment callback lookup:', {
+              error: error.message,
+              stack: error.stack,
+              paymentReference,
+              transactionId
+            });
           }
-        } catch (error) {
-          console.error('Error retrying payment callback:', error);
-        }
-      }, 2000); // Wait 2 seconds before retry
+        }, 2000); // Wait 2 seconds before retry
+      });
       
       // Return 202 Accepted to indicate we received the callback and will process it
       // Gateway will retry, and we'll also process it when payment record is created

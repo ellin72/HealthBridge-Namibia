@@ -23,6 +23,7 @@ export const createPolicy = async (req: Request, res: Response) => {
     let policy;
 
     // Loop allows exactly maxRetries attempts (0 to maxRetries-1)
+    // Single gate: while condition is the only check - no redundant inner check
     while (retries < maxRetries) {
       try {
         policy = await prisma.$transaction(async (tx) => {
@@ -57,11 +58,7 @@ export const createPolicy = async (req: Request, res: Response) => {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
           // Increment retry count
           retries++;
-          // Check if we've exhausted retries AFTER incrementing
-          // This ensures we get exactly maxRetries attempts (retries 0 to maxRetries-1)
-          if (retries >= maxRetries) {
-            throw new Error('Failed to create policy after multiple retries due to concurrent requests');
-          }
+          
           // Exponential backoff with jitter: 2^retries * 50ms base + random 0-50ms
           // This prevents thundering herd while ensuring eventual success
           const baseDelay = Math.pow(2, retries) * 50;
@@ -72,6 +69,13 @@ export const createPolicy = async (req: Request, res: Response) => {
         // If it's not a unique constraint error, throw immediately
         throw error;
       }
+    }
+
+    // If we exited the loop without creating a policy, throw error
+    // Single gate: relies solely on the while condition (retries < maxRetries)
+    // This ensures exactly maxRetries attempts (0 to maxRetries-1)
+    if (!policy) {
+      throw new Error('Failed to create policy after multiple retries due to concurrent requests');
     }
 
     if (!policy) {
