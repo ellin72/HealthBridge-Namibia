@@ -26,7 +26,9 @@ export const createWellnessContent = async (req: AuthRequest, res: Response) => 
         imageUrl,
         videoUrl,
         authorId,
-        isPublished: isPublished !== undefined ? isPublished : false // Default to draft - content must be explicitly published
+        // Handle null/undefined: coerce null to false, undefined defaults to false
+        // This ensures null-safety with Prisma's non-nullable Boolean field
+        isPublished: isPublished === null || isPublished === undefined ? false : Boolean(isPublished)
       },
       include: {
         author: {

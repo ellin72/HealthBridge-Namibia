@@ -274,10 +274,9 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
       
       // Process the pending callback asynchronously (don't block the response)
       // Use setImmediate to ensure it runs after the response is sent, but still track errors
-      setImmediate(async () => {
-        try {
-          await processPendingCallback(payment.id, pendingCallback);
-        } catch (error: any) {
+      // Wrap in Promise.resolve().catch() to handle unhandled promise rejections
+      setImmediate(() => {
+        Promise.resolve(processPendingCallback(payment.id, pendingCallback)).catch((error: any) => {
           // Log error with payment context for debugging
           console.error(`Error processing pending callback for payment ${payment.id}:`, {
             error: error.message,
@@ -288,7 +287,7 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
           });
           // Note: We don't throw here to avoid unhandled promise rejection
           // The payment record exists, so the callback can be retried by the gateway
-        }
+        });
       });
     }
 
@@ -487,47 +486,48 @@ export const processPaymentCallback = async (req: Request, res: Response) => {
       // Try to find payment again after a short delay (in case it was just created)
       // This handles the race condition where payment is created between our check and now
       // Use setImmediate + setTimeout to ensure proper async handling
+      // Wrap in Promise.resolve().catch() to handle unhandled promise rejections
       setImmediate(() => {
-        setTimeout(async () => {
-          try {
-            let retryPayment = null;
-            if (paymentReference) {
-              retryPayment = await prisma.payment.findFirst({
-                where: { paymentReference },
-                include: { invoice: { include: { patient: true, provider: true } } }
-              });
-            } else if (transactionId) {
-              retryPayment = await prisma.payment.findFirst({
-                where: { transactionId },
-                include: { invoice: { include: { patient: true, provider: true } } }
-              });
-            }
+        setTimeout(() => {
+          Promise.resolve((async () => {
+            try {
+              let retryPayment = null;
+              if (paymentReference) {
+                retryPayment = await prisma.payment.findFirst({
+                  where: { paymentReference },
+                  include: { invoice: { include: { patient: true, provider: true } } }
+                });
+              } else if (transactionId) {
+                retryPayment = await prisma.payment.findFirst({
+                  where: { transactionId },
+                  include: { invoice: { include: { patient: true, provider: true } } }
+                });
+              }
 
-            if (retryPayment) {
-              console.log(`Found payment on retry, processing pending callback: ${retryPayment.id}`);
-              const pendingCallback = getPendingCallback(paymentReference, transactionId);
-              if (pendingCallback) {
-                try {
+              if (retryPayment) {
+                console.log(`Found payment on retry, processing pending callback: ${retryPayment.id}`);
+                const pendingCallback = getPendingCallback(paymentReference, transactionId);
+                if (pendingCallback) {
                   await processPendingCallback(retryPayment.id, pendingCallback);
-                } catch (error: any) {
-                  console.error(`Error processing pending callback on retry for payment ${retryPayment.id}:`, {
-                    error: error.message,
-                    stack: error.stack,
-                    paymentReference,
-                    transactionId
-                  });
-                  // Don't throw - let gateway retry mechanism handle it
                 }
               }
+            } catch (error: any) {
+              console.error('Error retrying payment callback lookup:', {
+                error: error.message,
+                stack: error.stack,
+                paymentReference,
+                transactionId
+              });
+              // Don't throw - let gateway retry mechanism handle it
             }
-          } catch (error: any) {
-            console.error('Error retrying payment callback lookup:', {
+          })()).catch((error: any) => {
+            console.error('Unhandled error in payment callback retry:', {
               error: error.message,
               stack: error.stack,
               paymentReference,
               transactionId
             });
-          }
+          });
         }, 2000); // Wait 2 seconds before retry
       });
       
