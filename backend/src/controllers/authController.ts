@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { generateToken } from '../utils/jwt';
-
-const prisma = new PrismaClient();
+import { AuthRequest } from '../middleware/auth';
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -112,8 +111,12 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const getProfile = async (req: any, res: Response) => {
+export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: {

@@ -3,10 +3,9 @@
  * Generates digital receipts for payments
  */
 
-import { PrismaClient, BillingInvoice, Payment } from '@prisma/client';
+import { BillingInvoice, Payment } from '@prisma/client';
+import { prisma } from './prisma';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 export interface Receipt {
   receiptNumber: string;

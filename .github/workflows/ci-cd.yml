@@ -1,0 +1,230 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          cd backend && npm ci
+          cd ../frontend && npm ci
+      
+      - name: Run linting (Backend)
+        run: cd backend && npm run lint
+      
+      - name: Run linting (Frontend)
+        run: cd frontend && npm run lint
+      
+      - name: Type check (Backend)
+        run: cd backend && npx tsc --noEmit
+      
+      - name: Type check (Frontend)
+        run: cd frontend && npx tsc --noEmit
+
+  security:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: healthbridge
+          POSTGRES_PASSWORD: healthbridge123
+          POSTGRES_DB: healthbridge_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          cd backend && npm ci
+          cd ../frontend && npm ci
+      
+      - name: Run database migrations
+        run: |
+          cd backend
+          export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
+          npx prisma migrate deploy
+          npx prisma generate
+      
+      - name: Start backend server and wait for readiness
+        run: |
+          cd backend
+          export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
+          npm run build
+          # Start server in background with nohup to prevent termination when step ends
+          nohup npm start > /tmp/backend.log 2>&1 &
+          echo $! > /tmp/backend.pid
+          # Wait for server to be ready
+          timeout 60 bash -c 'until curl -f http://localhost:5000/api/health; do sleep 2; done'
+        env:
+          PORT: 5000
+          JWT_SECRET: test-secret-key-for-ci
+          NODE_ENV: test
+      
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+      
+      - name: Run npm audit
+        run: |
+          cd backend && npm audit --audit-level=high || true
+          cd ../frontend && npm audit --audit-level=high || true
+      
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.7.0
+        continue-on-error: true
+        with:
+          target: 'http://localhost:5000'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+      
+      - name: Stop backend server
+        if: always()
+        run: |
+          if [ -f /tmp/backend.pid ]; then
+            kill $(cat /tmp/backend.pid) 2>/dev/null || true
+            rm /tmp/backend.pid
+          fi
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: healthbridge
+          POSTGRES_PASSWORD: healthbridge123
+          POSTGRES_DB: healthbridge_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          cd backend && npm ci
+      
+      - name: Run database migrations
+        run: |
+          cd backend
+          export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
+          npx prisma migrate deploy
+          npx prisma generate
+      
+      - name: Run unit tests
+        run: |
+          cd backend
+          export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
+          npm test
+      
+      - name: Run integration tests
+        run: |
+          cd backend
+          export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
+          npm run test:integration
+
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [quality, security, test]
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Build backend
+        run: |
+          cd backend
+          npm ci
+          npm run build
+      
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+      
+      - name: Build Docker images
+        run: |
+          docker-compose build --profile local
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy to staging
+        run: |
+          echo "Deploy to staging environment"
+          # Add deployment commands here
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy to production
+        run: |
+          echo "Deploy to production environment"
+          # Add deployment commands here
+

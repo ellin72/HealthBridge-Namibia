@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { AuthRequest } from '../middleware/auth';
-
-const prisma = new PrismaClient();
+import { MedicalAidScheme } from '@prisma/client';
 
 // Get or create medical aid info
 export const getMedicalAidInfo = async (req: AuthRequest, res: Response) => {
@@ -19,11 +18,9 @@ export const getMedicalAidInfo = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    if (!medicalAidInfo) {
-      return res.status(404).json({ message: 'No medical aid information found' });
-    }
-
-    res.json({ medicalAidInfo });
+    // Return 200 with null if no medical aid info exists (instead of 404)
+    // This allows the frontend to handle the empty state gracefully
+    res.json({ medicalAidInfo: medicalAidInfo || null });
   } catch (error: any) {
     console.error('Get medical aid info error:', error);
     res.status(500).json({ message: 'Failed to fetch medical aid information', error: error.message });
@@ -40,10 +37,21 @@ export const upsertMedicalAidInfo = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Scheme and member number are required' });
     }
 
+    // Validate scheme enum value - return error if invalid instead of silently converting
+    const validSchemes: MedicalAidScheme[] = ['NAMMED', 'MEDICAL_AID_FUND', 'PROSANA', 'OTHER'];
+    if (!validSchemes.includes(scheme as MedicalAidScheme)) {
+      return res.status(400).json({ 
+        message: 'Invalid medical aid scheme', 
+        error: `Scheme must be one of: ${validSchemes.join(', ')}`,
+        provided: scheme
+      });
+    }
+    const normalizedScheme: MedicalAidScheme = scheme as MedicalAidScheme;
+
     const medicalAidInfo = await prisma.medicalAidInfo.upsert({
       where: { userId },
       update: {
-        scheme,
+        scheme: normalizedScheme,
         schemeName: schemeName || null,
         memberNumber,
         policyNumber: policyNumber || null,
@@ -51,7 +59,7 @@ export const upsertMedicalAidInfo = async (req: AuthRequest, res: Response) => {
       },
       create: {
         userId,
-        scheme,
+        scheme: normalizedScheme,
         schemeName: schemeName || null,
         memberNumber,
         policyNumber: policyNumber || null,
@@ -160,8 +168,10 @@ export const getClaims = async (req: AuthRequest, res: Response) => {
       where: { userId },
     });
 
+    // Return empty array if no medical aid info exists (instead of 404)
+    // This allows the frontend to handle the empty state gracefully
     if (!medicalAidInfo) {
-      return res.status(404).json({ message: 'No medical aid information found' });
+      return res.json({ claims: [] });
     }
 
     const claims = await prisma.medicalAidClaim.findMany({

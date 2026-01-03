@@ -3,9 +3,7 @@
  * Analyzes payment patterns and flags suspicious transactions
  */
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from './prisma';
 
 export interface FraudCheckResult {
   riskScore: number; // 0-1, where 1 is highest risk

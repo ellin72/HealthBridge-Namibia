@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { PaymentMethod, PaymentStatus } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { paymentGateway } from '../utils/paymentGateway';
 import { analyzePaymentForFraud, logFraudCheck } from '../utils/fraudDetection';
@@ -7,8 +8,114 @@ import { is2FAEnabled, verify2FAToken } from '../utils/twoFactorAuth';
 import { encryptCardToken, maskCardNumber } from '../utils/financialEncryption';
 import { sendPaymentConfirmation, sendReceiptEmail, sendReceiptSMS } from '../utils/notificationService';
 import { generateReceipt } from '../utils/receiptGenerator';
+import { 
+  storePendingCallback, 
+  getPendingCallback, 
+  peekPendingCallback,
+  removePendingCallback 
+} from '../utils/pendingPaymentCallbacks';
 
-const prisma = new PrismaClient();
+/**
+ * Process a pending callback for an existing payment record
+ * This is called when a payment record is created and a pending callback exists
+ */
+async function processPendingCallback(
+  paymentId: string, 
+  callback: { status: string; metadata?: any; transactionId?: string }
+): Promise<void> {
+  try {
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { invoice: { include: { patient: true, provider: true } } }
+    });
+
+    if (!payment) {
+      console.error(`Payment not found when processing pending callback: ${paymentId}`);
+      return;
+    }
+
+    // Handle different status formats
+    let paymentStatus: PaymentStatus = 'PENDING';
+    if (callback.status === 'success' || callback.status === 'COMPLETED' || callback.status === 'completed') {
+      paymentStatus = 'COMPLETED';
+    } else if (callback.status === 'failed' || callback.status === 'FAILED' || callback.status === 'rejected') {
+      paymentStatus = 'FAILED';
+    } else if (callback.status === 'PENDING' || callback.status === 'pending') {
+      paymentStatus = 'PENDING';
+    }
+
+    const updatedPayment = await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: paymentStatus as PaymentStatus,
+        transactionId: callback.transactionId || payment.transactionId,
+        metadata: callback.metadata ? JSON.stringify(callback.metadata) : payment.metadata,
+        completedAt: paymentStatus === 'COMPLETED' ? new Date() : null,
+      },
+    });
+
+    // Update invoice if payment completed
+    if (payment.invoice && paymentStatus === 'COMPLETED') {
+      await prisma.billingInvoice.update({
+        where: { id: payment.invoice.id },
+        data: {
+          status: 'PAID',
+          paidDate: new Date()
+        }
+      });
+
+      // Generate receipt and send notifications
+      if (payment.invoice) {
+        const receipt = await generateReceipt(payment.invoice, updatedPayment);
+        
+        await sendReceiptEmail({
+          invoiceNumber: payment.invoice.invoiceNumber,
+          receiptNumber: receipt.receiptNumber,
+          patientName: `${payment.invoice.patient.firstName} ${payment.invoice.patient.lastName}`,
+          patientEmail: payment.invoice.patient.email,
+          patientPhone: payment.invoice.patient.phone || undefined,
+          amount: updatedPayment.amount,
+          currency: updatedPayment.currency,
+          paymentMethod: updatedPayment.method,
+          transactionId: updatedPayment.transactionId || undefined,
+          items: JSON.parse(payment.invoice.items),
+          subtotal: payment.invoice.subtotal,
+          tax: payment.invoice.tax,
+          discount: payment.invoice.discount,
+          total: payment.invoice.total,
+          pdfUrl: receipt.pdfUrl
+        });
+
+        if (payment.invoice.patient.phone) {
+          await sendReceiptSMS({
+            invoiceNumber: payment.invoice.invoiceNumber,
+            receiptNumber: receipt.receiptNumber,
+            patientName: `${payment.invoice.patient.firstName} ${payment.invoice.patient.lastName}`,
+            patientPhone: payment.invoice.patient.phone,
+            amount: updatedPayment.amount,
+            currency: updatedPayment.currency,
+            paymentMethod: updatedPayment.method,
+            transactionId: updatedPayment.transactionId || undefined
+          });
+        }
+      }
+    }
+
+    // Remove callback from map after successful processing
+    // This ensures the callback is only removed after successful completion
+    // If processing fails, the callback remains in the map for retry
+    removePendingCallback(payment.paymentReference || undefined, payment.transactionId || undefined);
+
+    console.log(`Successfully processed pending callback for payment: ${paymentId}`, {
+      status: paymentStatus,
+      paymentReference: payment.paymentReference,
+      transactionId: payment.transactionId
+    });
+  } catch (error: any) {
+    console.error(`Error processing pending callback for payment ${paymentId}:`, error);
+    throw error;
+  }
+}
 
 // Create payment with fraud detection and 2FA
 export const createPayment = async (req: AuthRequest, res: Response) => {
@@ -17,6 +124,15 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
     const { invoiceId, appointmentId, amount, method, currency = 'NAD', cardToken, twoFactorToken } = req.body;
     const ipAddress = req.ip || req.headers['x-forwarded-for'] as string;
     const userAgent = req.headers['user-agent'];
+
+    console.log('Payment request received:', {
+      userId,
+      invoiceId,
+      appointmentId,
+      amount,
+      method,
+      currency
+    });
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ message: 'Valid amount is required' });
@@ -28,6 +144,8 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
 
     // Check if invoice exists and get details
     let invoice = null;
+    let finalAmount = amount; // Default to provided amount
+    
     if (invoiceId) {
       invoice = await prisma.billingInvoice.findFirst({
         where: { id: invoiceId, patientId: userId },
@@ -35,16 +153,56 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
       });
 
       if (!invoice) {
-        return res.status(404).json({ message: 'Invoice not found' });
+        console.error('Invoice not found:', { invoiceId, userId });
+        return res.status(404).json({ 
+          message: 'Invoice not found',
+          details: 'The invoice ID provided does not exist or does not belong to you'
+        });
       }
 
       if (invoice.status === 'PAID') {
         return res.status(400).json({ message: 'Invoice already paid' });
       }
 
-      // Use invoice amount if provided
-      if (Math.abs(amount - invoice.total) > 0.01) {
-        return res.status(400).json({ message: 'Payment amount does not match invoice total' });
+      // Use invoice amount if provided - allow small rounding differences
+      const amountDifference = Math.abs(amount - invoice.total);
+      if (amountDifference > 0.01) {
+        console.error('Amount mismatch:', {
+          providedAmount: amount,
+          invoiceTotal: invoice.total,
+          difference: amountDifference
+        });
+        return res.status(400).json({ 
+          message: 'Payment amount does not match invoice total',
+          details: `Expected ${invoice.currency} ${invoice.total.toFixed(2)}, but received ${amount.toFixed(2)}`
+        });
+      }
+      
+      // Use invoice amount to ensure exact match
+      finalAmount = invoice.total;
+    } else if (appointmentId) {
+      // If no invoiceId but appointmentId is provided, try to find the invoice for this appointment
+      invoice = await prisma.billingInvoice.findFirst({
+        where: { 
+          appointmentId: appointmentId,
+          patientId: userId,
+          status: { not: 'PAID' }
+        },
+        include: { patient: true, provider: true }
+      });
+      
+      if (invoice) {
+        // Use invoice amount if found
+        const amountDifference = Math.abs(amount - invoice.total);
+        if (amountDifference > 0.01) {
+          console.warn('Amount mismatch with appointment invoice:', {
+            providedAmount: amount,
+            invoiceTotal: invoice.total,
+            difference: amountDifference
+          });
+        }
+        // Use invoice amount to ensure exact match
+        finalAmount = invoice.total;
       }
     }
 
@@ -59,8 +217,8 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if 2FA is required
-    const requires2FA = await is2FAEnabled(userId) || amount > 5000 || fraudCheck.flagged;
+    // Check if 2FA is required (use finalAmount for threshold check)
+    const requires2FA = await is2FAEnabled(userId) || finalAmount > 5000 || fraudCheck.flagged;
     
     if (requires2FA) {
       if (!twoFactorToken) {
@@ -70,9 +228,9 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
         const payment = await prisma.payment.create({
           data: {
             userId,
-            invoiceId: invoiceId || null,
+            invoiceId: invoice?.id || invoiceId || null,
             appointmentId: appointmentId || null,
-            amount,
+            amount: finalAmount,
             currency,
             method: method as PaymentMethod,
             status: 'PENDING',
@@ -113,33 +271,40 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
       select: { email: true, phone: true, firstName: true, lastName: true }
     });
 
-    // Process payment through gateway
+    // Process payment through gateway (finalAmount is already set above)
     const gatewayResponse = await paymentGateway.processPayment({
-      amount,
+      amount: finalAmount,
       currency,
       method,
       reference: paymentReference,
       customerEmail: user?.email,
       customerPhone: user?.phone || undefined,
       description: invoice ? `Invoice ${invoice.invoiceNumber}` : 'Payment',
-      returnUrl: `${process.env.FRONTEND_URL}/payment/success`,
-      cancelUrl: `${process.env.FRONTEND_URL}/payment/cancel`
+      returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/success`,
+      cancelUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/cancel`
     });
 
     if (!gatewayResponse.success) {
+      console.error('Payment gateway error:', {
+        method,
+        amount: finalAmount,
+        currency,
+        error: gatewayResponse.error
+      });
       return res.status(400).json({
         message: 'Payment gateway error',
-        error: gatewayResponse.error
+        error: gatewayResponse.error || 'Failed to process payment. Please check payment method configuration.',
+        details: `The ${method} payment gateway is not properly configured or returned an error.`
       });
     }
 
-    // Create payment record
+    // Create payment record - use finalAmount (invoice total if available)
     const payment = await prisma.payment.create({
       data: {
         userId,
-        invoiceId: invoiceId || null,
+        invoiceId: invoice?.id || invoiceId || null,
         appointmentId: appointmentId || null,
-        amount,
+        amount: finalAmount,
         currency,
         method: method as PaymentMethod,
         status: gatewayResponse.transactionId ? 'COMPLETED' : 'PENDING',
@@ -158,6 +323,47 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
 
     // Log audit
     await logFraudCheck(payment.id, fraudCheck, ipAddress, userAgent);
+
+    // Check for pending callbacks that may have arrived before payment record creation
+    // Process them asynchronously to update the payment status
+    // Use peekPendingCallback first to check if callback exists without removing it
+    const pendingCallback = peekPendingCallback(payment.paymentReference || undefined, payment.transactionId || undefined);
+    if (pendingCallback) {
+      console.log(`Found pending callback for newly created payment: ${payment.id}`, {
+        paymentReference: payment.paymentReference,
+        transactionId: payment.transactionId
+      });
+      
+      // Get and remove the callback atomically to prevent duplicate processing
+      // This ensures only one process can retrieve and process the callback
+      const callbackToProcess = getPendingCallback(payment.paymentReference || undefined, payment.transactionId || undefined);
+      if (callbackToProcess) {
+        // Process the pending callback asynchronously (don't block the response)
+        // Use setImmediate to ensure it runs after the response is sent, but still track errors
+        // Wrap in Promise.resolve().catch() to handle unhandled promise rejections
+        setImmediate(() => {
+          Promise.resolve(processPendingCallback(payment.id, callbackToProcess)).catch((error: any) => {
+            // Log error with payment context for debugging
+            console.error(`Error processing pending callback for payment ${payment.id}:`, {
+              error: error.message,
+              stack: error.stack,
+              paymentReference: payment.paymentReference,
+              transactionId: payment.transactionId,
+              callbackStatus: callbackToProcess.status
+            });
+            // If processing fails, re-store the callback so it can be retried
+            // This prevents the callback from being permanently lost
+            storePendingCallback(
+              callbackToProcess.paymentReference,
+              callbackToProcess.transactionId,
+              callbackToProcess.status,
+              callbackToProcess.metadata
+            );
+            console.log(`Re-stored pending callback after processing failure for payment ${payment.id}`);
+          });
+        });
+      }
+    }
 
     // Update invoice if payment completed
     if (invoice && gatewayResponse.transactionId) {
@@ -316,20 +522,135 @@ export const processPaymentCallback = async (req: Request, res: Response) => {
   try {
     const { paymentReference, transactionId, status, metadata } = req.body;
 
-    if (!paymentReference) {
-      return res.status(400).json({ message: 'Payment reference is required' });
+    // Validate that at least one identifier is provided
+    if (!paymentReference && !transactionId) {
+      return res.status(400).json({ 
+        message: 'Invalid callback: paymentReference or transactionId is required',
+        error: 'Missing payment identifier'
+      });
     }
 
-    const payment = await prisma.payment.findFirst({
-      where: { paymentReference },
-      include: { invoice: { include: { patient: true, provider: true } } }
-    });
+    // Try to find payment by paymentReference or transactionId
+    let payment = null;
+    if (paymentReference) {
+      payment = await prisma.payment.findFirst({
+        where: { paymentReference },
+        include: { invoice: { include: { patient: true, provider: true } } }
+      });
+    } else if (transactionId) {
+      payment = await prisma.payment.findFirst({
+        where: { transactionId },
+        include: { invoice: { include: { patient: true, provider: true } } }
+      });
+    }
 
     if (!payment) {
-      return res.status(404).json({ message: 'Payment not found' });
+      // Payment not found - store callback for later processing
+      // This handles race conditions where callback arrives before payment record is created
+      storePendingCallback(paymentReference, transactionId, status, metadata);
+      
+      console.warn(`Payment callback received for non-existent payment, stored for later processing:`, { 
+        paymentReference, 
+        transactionId,
+        status,
+        metadata,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Try to find payment again after a short delay (in case it was just created)
+      // This handles the race condition where payment is created between our check and now
+      // Use setImmediate + setTimeout to ensure proper async handling
+      // Wrap in Promise.resolve().catch() to handle unhandled promise rejections
+      setImmediate(() => {
+        setTimeout(() => {
+          Promise.resolve((async () => {
+            try {
+              let retryPayment = null;
+              if (paymentReference) {
+                retryPayment = await prisma.payment.findFirst({
+                  where: { paymentReference },
+                  include: { invoice: { include: { patient: true, provider: true } } }
+                });
+              } else if (transactionId) {
+                retryPayment = await prisma.payment.findFirst({
+                  where: { transactionId },
+                  include: { invoice: { include: { patient: true, provider: true } } }
+                });
+              }
+
+              if (retryPayment) {
+                console.log(`Found payment on retry, checking for pending callback: ${retryPayment.id}`);
+                // Use peekPendingCallback to check if callback exists without removing it
+                // This prevents race conditions where createPayment already retrieved it
+                const pendingCallbackExists = peekPendingCallback(paymentReference, transactionId);
+                if (pendingCallbackExists) {
+                  // Get and remove the callback atomically to prevent duplicate processing
+                  const pendingCallback = getPendingCallback(paymentReference, transactionId);
+                  if (pendingCallback) {
+                    try {
+                      await processPendingCallback(retryPayment.id, pendingCallback);
+                    } catch (error: any) {
+                      // If processing fails, re-store the callback so it can be retried
+                      // This prevents the callback from being permanently lost
+                      console.error(`Error processing pending callback in retry logic for payment ${retryPayment.id}:`, {
+                        error: error.message,
+                        stack: error.stack,
+                        paymentReference,
+                        transactionId
+                      });
+                      storePendingCallback(
+                        pendingCallback.paymentReference,
+                        pendingCallback.transactionId,
+                        pendingCallback.status,
+                        pendingCallback.metadata
+                      );
+                      console.log(`Re-stored pending callback after processing failure in retry logic for payment ${retryPayment.id}`);
+                      throw error; // Re-throw to be caught by outer catch
+                    }
+                  }
+                } else {
+                  console.log(`No pending callback found for payment ${retryPayment.id} - may have been processed by createPayment`);
+                }
+              }
+            } catch (error: any) {
+              console.error('Error retrying payment callback lookup:', {
+                error: error.message,
+                stack: error.stack,
+                paymentReference,
+                transactionId
+              });
+              // Don't throw - let gateway retry mechanism handle it
+            }
+          })()).catch((error: any) => {
+            console.error('Unhandled error in payment callback retry:', {
+              error: error.message,
+              stack: error.stack,
+              paymentReference,
+              transactionId
+            });
+          });
+        }, 2000); // Wait 2 seconds before retry
+      });
+      
+      // Return 202 Accepted to indicate we received the callback and will process it
+      // Gateway will retry, and we'll also process it when payment record is created
+      return res.status(202).json({ 
+        message: 'Payment callback received, processing',
+        error: 'Payment record not yet available, will be processed when available',
+        paymentReference: paymentReference || null,
+        transactionId: transactionId || null
+      });
     }
 
-    const paymentStatus = status === 'success' ? 'COMPLETED' : status === 'failed' ? 'FAILED' : 'PENDING';
+    // Handle different status formats
+    let paymentStatus: PaymentStatus = 'PENDING';
+    if (status === 'success' || status === 'COMPLETED' || status === 'completed') {
+      paymentStatus = 'COMPLETED';
+    } else if (status === 'failed' || status === 'FAILED' || status === 'rejected') {
+      paymentStatus = 'FAILED';
+    } else if (status === 'PENDING' || status === 'pending') {
+      paymentStatus = 'PENDING';
+    }
 
     const updatedPayment = await prisma.payment.update({
       where: { id: payment.id },
@@ -340,6 +661,9 @@ export const processPaymentCallback = async (req: Request, res: Response) => {
         completedAt: paymentStatus === 'COMPLETED' ? new Date() : null,
       },
     });
+
+    // Remove pending callback since we've successfully processed it
+    removePendingCallback(payment.paymentReference || undefined, payment.transactionId || undefined);
 
     // Update invoice if payment completed
     if (payment.invoice && paymentStatus === 'COMPLETED') {

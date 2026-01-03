@@ -1,8 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient, WellnessCategory } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { WellnessCategory } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
 export const createWellnessContent = async (req: AuthRequest, res: Response) => {
   try {
@@ -27,7 +26,9 @@ export const createWellnessContent = async (req: AuthRequest, res: Response) => 
         imageUrl,
         videoUrl,
         authorId,
-        isPublished: isPublished || false
+        // Handle null/undefined: coerce null to false, undefined defaults to false
+        // This ensures null-safety with Prisma's non-nullable Boolean field
+        isPublished: isPublished === null || isPublished === undefined ? false : Boolean(isPublished)
       },
       include: {
         author: {

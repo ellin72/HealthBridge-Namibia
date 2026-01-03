@@ -1,9 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
 
 export const getUsers = async (req: AuthRequest, res: Response) => {
   try {
@@ -13,10 +11,16 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
 
     const where: any = {};
 
+    // ADMIN users can see all users (route is already protected by authorize(UserRole.ADMIN))
     // Regular users can only see themselves
     // Providers can only see patients who have chosen them
     // Wellness coaches can only see users who have chosen them
-    if (userRole === 'PATIENT' || userRole === 'STUDENT') {
+    if (userRole === 'ADMIN') {
+      // Admins can see all users - no restriction needed
+      // where clause remains empty to allow all users
+      // Note: Role and search filters (lines 47-57) still apply to ADMIN queries
+      // This allows admins to filter users by role or search terms for administrative purposes
+    } else if (userRole === 'PATIENT' || userRole === 'STUDENT') {
       // Patients/Students can only see themselves
       where.id = userId;
     } else if (userRole === 'HEALTHCARE_PROVIDER') {
@@ -38,7 +42,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
       // For now, return empty until we establish the relationship in schema
       where.id = '00000000-0000-0000-0000-000000000000';
     } else {
-      // All other roles (including ADMIN) cannot see user list
+      // All other roles cannot see user list
       where.id = '00000000-0000-0000-0000-000000000000';
     }
 

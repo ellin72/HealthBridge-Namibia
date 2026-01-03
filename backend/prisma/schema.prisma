@@ -667,6 +667,13 @@ model Payment {
   @@index([createdAt])
 }
 
+enum SyncQueueStatus {
+  PENDING
+  PROCESSING
+  SYNCED
+  FAILED
+}
+
 model OfflineSyncQueue {
   id              String          @id @default(uuid())
   userId          String
@@ -675,6 +682,7 @@ model OfflineSyncQueue {
   entityId        String?
   payload         String          // JSON data
   synced          Boolean         @default(false)
+  status          SyncQueueStatus @default(PENDING)
   syncedAt        DateTime?
   error           String?
   retryCount      Int             @default(0)
@@ -685,6 +693,7 @@ model OfflineSyncQueue {
 
   @@index([userId])
   @@index([synced])
+  @@index([status])
   @@index([createdAt])
 }
 
@@ -1038,5 +1047,144 @@ model RemoteMonitoringData {
   @@index([metricType])
   @@index([recordedAt])
   @@index([isAlert])
+}
+
+// ========== RISK & CONSIDERATIONS: TRANSACTION LOGGING ==========
+
+model TransactionLog {
+  id              String            @id @default(uuid())
+  transactionType String            // PAYMENT, REFUND, SUBSCRIPTION, etc.
+  transactionId   String?           // Reference to related transaction
+  userId          String?
+  amount          Float?
+  currency        String            @default("NAD")
+  status          String            // SUCCESS, FAILED, PENDING, CANCELLED
+  paymentMethod   String?
+  gateway         String?           // PAYTODAY, SNAPSCAN, etc.
+  gatewayTransactionId String?
+  metadata        String?           // JSON for additional data
+  ipAddress       String?
+  userAgent       String?
+  errorMessage    String?
+  createdAt       DateTime          @default(now())
+
+  @@index([transactionType])
+  @@index([transactionId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([gateway])
+}
+
+// ========== RISK & CONSIDERATIONS: SURVEYS & FEEDBACK ==========
+
+enum SurveyType {
+  USER_SATISFACTION
+  FEATURE_FEEDBACK
+  ADOPTION_METRICS
+  SUPPORT_SATISFACTION
+  PLATFORM_FEEDBACK
+}
+
+enum SurveyStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+model Survey {
+  id              String            @id @default(uuid())
+  title           String
+  description     String?
+  surveyType      SurveyType
+  status          SurveyStatus      @default(DRAFT)
+  questions       String            // JSON array of questions
+  targetAudience  String?           // JSON array of user roles
+  startDate       DateTime?
+  endDate         DateTime?
+  isAnonymous     Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  responses       SurveyResponse[]
+
+  @@index([surveyType])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model SurveyResponse {
+  id              String            @id @default(uuid())
+  surveyId        String
+  userId          String?           // Null if anonymous
+  responses       String            // JSON object with question-answer pairs
+  metadata        String?           // JSON for additional data (device, location, etc.)
+  completedAt     DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+
+  survey          Survey            @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  @@index([surveyId])
+  @@index([userId])
+  @@index([completedAt])
+}
+
+model UserFeedback {
+  id              String            @id @default(uuid())
+  userId          String?
+  feedbackType    String            // BUG, FEATURE_REQUEST, COMPLIMENT, COMPLAINT, GENERAL
+  category        String?           // UI, PERFORMANCE, FEATURE, SUPPORT, etc.
+  title           String
+  description     String
+  rating          Int?              // 1-5 scale
+  status          String            @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  priority        String?           // LOW, MEDIUM, HIGH, CRITICAL
+  assignedTo      String?           // User ID of assignee
+  resolution      String?
+  resolvedAt      DateTime?
+  metadata        String?           // JSON for additional data
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([feedbackType])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+// ========== RISK & CONSIDERATIONS: POLICY ENGINE ==========
+
+enum PolicyType {
+  DATA_RETENTION
+  ACCESS_CONTROL
+  CONSENT
+  PAYMENT
+  NOTIFICATION
+  COMPLIANCE
+}
+
+model Policy {
+  id              String            @id @default(uuid())
+  policyType      PolicyType
+  name            String
+  description     String?
+  policyData      String            // JSON object with policy configuration
+  version         Int               @default(1)
+  isActive        Boolean           @default(true)
+  effectiveDate   DateTime          @default(now())
+  expirationDate  DateTime?
+  createdBy       String?           // User ID
+  updatedBy       String?           // User ID
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([policyType])
+  @@index([isActive])
+  @@index([effectiveDate])
+  @@index([expirationDate])
+  @@unique([policyType, version])
 }
 

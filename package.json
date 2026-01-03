@@ -15,7 +15,18 @@
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ../mobile && npm install",
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --config tests/jest.config.js",
+    "test:watch": "jest --config tests/jest.config.js --watch",
+    "test:coverage": "jest --config tests/jest.config.js --coverage",
+    "test:routes": "jest --config tests/jest.config.js tests/routes",
+    "test:security": "jest --config tests/jest.config.js tests/security",
+    "test:legacy": "cd .. && node tests/route-tests.js"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^2.1.1",
+    "axios": "^1.13.2",
+    "jest": "^29.7.0"
   },
   "keywords": [
     "healthcare",
@@ -26,4 +37,3 @@
   "author": "HealthBridge Namibia Team",
   "license": "PROPRIETARY"
 }
-

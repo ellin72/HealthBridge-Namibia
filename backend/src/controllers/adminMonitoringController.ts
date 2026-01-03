@@ -1,8 +1,6 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { AuthRequest } from '../middleware/auth';
-
-const prisma = new PrismaClient();
 
 // Get transaction monitoring dashboard data
 export const getTransactionMonitoring = async (req: AuthRequest, res: Response) => {

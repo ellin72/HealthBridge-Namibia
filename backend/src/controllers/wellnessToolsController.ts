@@ -1,8 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient, HabitType, WellnessCategory, ChallengeStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { HabitType, WellnessCategory, ChallengeStatus } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
 // ========== WELLNESS PLANS ==========
 

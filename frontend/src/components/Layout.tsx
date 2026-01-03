@@ -26,7 +26,13 @@ import {
   VideoCall as VideoCallIcon,
   TrackChanges as TrackIcon,
   Psychology as ResearchIcon,
-  LocalPharmacy as PharmacyIcon
+  LocalPharmacy as PharmacyIcon,
+  Assignment as SurveyIcon,
+  Policy as PolicyIcon,
+  LocalHospital as MedicalAidIcon,
+  Payment as PaymentIcon,
+  MonitorHeart as MonitorIcon,
+  AttachMoney as EarningsIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -69,6 +75,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
         { text: 'Wellness Tools', icon: <TrackIcon />, path: '/wellness-tools' },
         { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
+        { text: 'Medical Aid', icon: <MedicalAidIcon />, path: '/medical-aid' },
+        { text: 'Payments', icon: <PaymentIcon />, path: '/payments' },
+        { text: 'Surveys', icon: <SurveyIcon />, path: '/surveys' },
+        { text: 'Policies', icon: <PolicyIcon />, path: '/policies' },
       ];
     }
 
@@ -80,7 +90,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         { text: 'Telehealth Pro', icon: <VideoCallIcon />, path: '/telehealth-pro' },
         { text: 'Clinical Templates', icon: <TrackIcon />, path: '/clinical-templates' },
         { text: 'Billing', icon: <CalendarIcon />, path: '/billing' },
+        { text: 'Provider Earnings', icon: <EarningsIcon />, path: '/provider-earnings' },
+        { text: 'Monitoring', icon: <MonitorIcon />, path: '/monitoring' },
         { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
+        { text: 'Surveys', icon: <SurveyIcon />, path: '/surveys' },
+        { text: 'Policies', icon: <PolicyIcon />, path: '/policies' },
       ];
     }
 
@@ -114,6 +128,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
         { text: 'Research Support', icon: <ResearchIcon />, path: '/research' },
         { text: 'User Management', icon: <PeopleIcon />, path: '/users' },
+        { text: 'Surveys', icon: <SurveyIcon />, path: '/surveys' },
+        { text: 'Policies', icon: <PolicyIcon />, path: '/policies' },
+        { text: 'Monitoring', icon: <MonitorIcon />, path: '/monitoring' },
       ];
     }
 

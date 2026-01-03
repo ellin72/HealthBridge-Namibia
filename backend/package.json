@@ -17,7 +17,8 @@
     "migrate:docker:dev": "node run-migration-wrapper.js migrate-dev-docker",
     "migrate:deploy": "docker-compose exec -T backend sh -c \"cd /app; npx prisma migrate deploy; npx prisma generate\"",
     "migrate:dev": "docker-compose exec -T backend sh -c \"cd /app; npx prisma migrate dev\"",
-    "dev:docker": "bash dev-docker.sh"
+    "dev:docker": "bash dev-docker.sh",
+    "test:routes": "cd .. && node tests/route-tests.js"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

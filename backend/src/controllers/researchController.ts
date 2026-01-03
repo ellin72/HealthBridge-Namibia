@@ -1,8 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient, ResearchField, ProposalStatus, MilestoneType, MilestoneStatus, CollaborationType } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { ResearchField, ProposalStatus, MilestoneType, MilestoneStatus, CollaborationType } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
 // ========== RESEARCH TOPIC GENERATOR ==========
 

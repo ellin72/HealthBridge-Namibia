@@ -24,6 +24,12 @@ import UserGuide from './pages/UserGuide';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import APIDocumentation from './pages/APIDocumentation';
+import Surveys from './pages/Surveys';
+import Policies from './pages/Policies';
+import MedicalAid from './pages/MedicalAid';
+import Payments from './pages/Payments';
+import Monitoring from './pages/Monitoring';
+import ProviderEarnings from './pages/ProviderEarnings';
 
 const theme = createTheme({
   palette: {
@@ -311,6 +317,54 @@ function App() {
             <Route path="/docs/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/docs/terms-of-service" element={<TermsOfService />} />
             <Route path="/docs/api" element={<APIDocumentation />} />
+            <Route
+              path="/surveys"
+              element={
+                <PrivateRoute>
+                  <Surveys />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/policies"
+              element={
+                <PrivateRoute>
+                  <Policies />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/medical-aid"
+              element={
+                <PrivateRoute>
+                  <MedicalAid />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/payments"
+              element={
+                <PrivateRoute>
+                  <Payments />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/monitoring"
+              element={
+                <PrivateRoute>
+                  <Monitoring />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/provider-earnings"
+              element={
+                <PrivateRoute>
+                  <ProviderEarnings />
+                </PrivateRoute>
+              }
+            />
           </Routes>
         </Router>
       </AuthProvider>
