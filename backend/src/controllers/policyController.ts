@@ -165,9 +165,9 @@ export const getActivePolicy = async (req: Request, res: Response) => {
     });
 
     if (!policy) {
-      return res.status(404).json({
-        success: false,
-        message: 'Active policy not found'
+      return res.json({
+        success: true,
+        data: null
       });
     }
 

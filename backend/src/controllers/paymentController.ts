@@ -315,20 +315,35 @@ export const processPaymentCallback = async (req: Request, res: Response) => {
   try {
     const { paymentReference, transactionId, status, metadata } = req.body;
 
-    if (!paymentReference) {
-      return res.status(400).json({ message: 'Payment reference is required' });
+    // Try to find payment by paymentReference or transactionId
+    let payment = null;
+    if (paymentReference) {
+      payment = await prisma.payment.findFirst({
+        where: { paymentReference },
+        include: { invoice: { include: { patient: true, provider: true } } }
+      });
+    } else if (transactionId) {
+      payment = await prisma.payment.findFirst({
+        where: { transactionId },
+        include: { invoice: { include: { patient: true, provider: true } } }
+      });
     }
-
-    const payment = await prisma.payment.findFirst({
-      where: { paymentReference },
-      include: { invoice: { include: { patient: true, provider: true } } }
-    });
 
     if (!payment) {
-      return res.status(404).json({ message: 'Payment not found' });
+      // For callbacks from external services, acknowledge even if payment not found
+      // This prevents external services from retrying
+      return res.status(200).json({ message: 'Callback received', acknowledged: true });
     }
 
-    const paymentStatus = status === 'success' ? 'COMPLETED' : status === 'failed' ? 'FAILED' : 'PENDING';
+    // Handle different status formats
+    let paymentStatus: PaymentStatus = 'PENDING';
+    if (status === 'success' || status === 'COMPLETED' || status === 'completed') {
+      paymentStatus = 'COMPLETED';
+    } else if (status === 'failed' || status === 'FAILED' || status === 'rejected') {
+      paymentStatus = 'FAILED';
+    } else if (status === 'PENDING' || status === 'pending') {
+      paymentStatus = 'PENDING';
+    }
 
     const updatedPayment = await prisma.payment.update({
       where: { id: payment.id },

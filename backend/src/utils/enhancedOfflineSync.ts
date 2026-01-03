@@ -29,7 +29,16 @@ export async function processSyncQueueEnhanced(userId: string, batchSize: number
   failed: number;
   results: any[];
 }> {
-  // First, handle orphaned items: mark PROCESSING items as PENDING for retry, and mark PENDING items with retryCount >= 5 as FAILED
+  // First, migrate any items with null status to PENDING (for existing records before status field was added)
+  // This must happen BEFORE the retry count check to ensure items with retryCount >= 5 are properly marked as FAILED
+  // Note: Using raw query to handle potential null values in legacy data (Prisma types don't allow null on non-nullable fields)
+  await prisma.$executeRaw`
+    UPDATE "OfflineSyncQueue" 
+    SET status = 'PENDING' 
+    WHERE "userId" = ${userId} AND status IS NULL
+  `;
+
+  // Handle orphaned items: mark PROCESSING items as PENDING for retry, and mark PENDING items with retryCount >= 5 as FAILED
   const processingTimeout = 5 * 60 * 1000; // 5 minutes - items stuck in PROCESSING longer than this are considered orphaned
   const timeoutThreshold = new Date(Date.now() - processingTimeout);
   
@@ -47,7 +56,8 @@ export async function processSyncQueueEnhanced(userId: string, batchSize: number
         status: 'PENDING'
       }
     }),
-    // Mark any PENDING items with retryCount >= 5 as FAILED (they should have been marked as FAILED but weren't due to race conditions)
+    // Mark any PENDING items with retryCount >= 5 as FAILED (including items that were just migrated from null status)
+    // This check runs AFTER the null status migration to ensure all items with exhausted retries are marked as FAILED
     prisma.offlineSyncQueue.updateMany({
       where: {
         userId,
@@ -60,17 +70,6 @@ export async function processSyncQueueEnhanced(userId: string, batchSize: number
       }
     })
   ]);
-
-  // First, migrate any items with null status to PENDING (for existing records before status field was added)
-  await prisma.offlineSyncQueue.updateMany({
-    where: {
-      userId,
-      status: null
-    },
-    data: {
-      status: 'PENDING'
-    }
-  });
 
   // Fetch candidate items to process: PENDING status with retryCount < 5
   const candidateItems = await prisma.offlineSyncQueue.findMany({

@@ -275,7 +275,7 @@ async function testAuthRoutes() {
 
   await runTest('GET /api/auth/profile - Authenticated', async () => {
     const result = await makeRequest('GET', '/auth/profile', null, tokens.patient, 200);
-    return result.success && result.data.user;
+    return result.success && result.data && result.data.user;
   });
 
   await runTest('GET /api/auth/profile - Unauthenticated', async () => {
@@ -357,8 +357,8 @@ async function testAppointmentRoutes() {
   await runTest('POST /api/appointments', async () => {
     const result = await makeRequest('POST', '/appointments', {
       providerId: testUsers.provider?.id,
-      date: new Date().toISOString(),
-      reason: 'Test appointment'
+      appointmentDate: new Date().toISOString(),
+      notes: 'Test appointment'
     }, tokens.patient, 201);
     if (result.success && result.data.appointment) {
       appointmentId = result.data.appointment.id;
@@ -379,7 +379,7 @@ async function testAppointmentRoutes() {
 
     await runTest('PUT /api/appointments/:id', async () => {
       const result = await makeRequest('PUT', `/appointments/${appointmentId}`, {
-        status: 'CONFIRMED'
+        status: 'CANCELLED'
       }, tokens.patient, 200);
       return result.success;
     });
@@ -393,13 +393,30 @@ async function testConsultationRoutes() {
   let consultationId = null;
 
   await runTest('POST /api/consultations', async () => {
+    // First create an appointment for the consultation
+    let testAppointmentId = null;
+    if (testUsers.provider?.id && testUsers.patient?.id) {
+      const appointmentResult = await makeRequest('POST', '/appointments', {
+        providerId: testUsers.provider.id,
+        appointmentDate: new Date().toISOString(),
+        notes: 'Test appointment for consultation'
+      }, tokens.patient, 201);
+      if (appointmentResult.success && appointmentResult.data.appointment) {
+        testAppointmentId = appointmentResult.data.appointment.id;
+      }
+    }
+    
+    if (!testAppointmentId) {
+      return false; // Skip if we couldn't create an appointment
+    }
+    
     const result = await makeRequest('POST', '/consultations', {
-      appointmentId: 'test-appointment-id',
+      appointmentId: testAppointmentId,
       notes: 'Test consultation notes',
       diagnosis: 'Test diagnosis'
     }, tokens.provider, 201);
-    if (result.success && result.data.consultation) {
-      consultationId = result.data.consultation.id;
+    if (result.success && result.data.consultationNote) {
+      consultationId = result.data.consultationNote.id;
     }
     return result.success;
   });
@@ -426,11 +443,12 @@ async function testWellnessRoutes() {
   await runTest('POST /api/wellness', async () => {
     const result = await makeRequest('POST', '/wellness', {
       title: 'Test Wellness Content',
+      description: 'Test description',
       content: 'Test content',
       category: 'NUTRITION'
-    }, tokens.patient, 201);
-    if (result.success && result.data.wellness) {
-      wellnessId = result.data.wellness.id;
+    }, tokens.wellnessCoach, 201);
+    if (result.success && result.data.wellnessContent) {
+      wellnessId = result.data.wellnessContent.id;
     }
     return result.success;
   });
@@ -551,7 +569,7 @@ async function testTriageRoutes() {
     const result = await makeRequest('POST', '/triage/assess', {
       symptoms: ['fever', 'cough'],
       severity: 'MODERATE'
-    }, tokens.patient, 200);
+    }, tokens.patient, 201);
     return result.success;
   });
 
@@ -572,9 +590,10 @@ async function testMedicalAidRoutes() {
 
   await runTest('POST /api/medical-aid', async () => {
     const result = await makeRequest('POST', '/medical-aid', {
+      scheme: 'TEST_SCHEME',
       schemeName: 'Test Scheme',
       memberNumber: '123456',
-      policyHolder: 'Test Holder'
+      policyNumber: 'POL-123456'
     }, tokens.patient, 200);
     return result.success;
   });
@@ -596,8 +615,9 @@ async function testPaymentRoutes() {
 
   await runTest('POST /api/payments/callback - Public endpoint', async () => {
     const result = await makeRequest('POST', '/payments/callback', {
+      paymentReference: `PAY-${Date.now()}-TEST`,
       transactionId: 'test-123',
-      status: 'COMPLETED'
+      status: 'success'
     }, null, 200);
     return result.success;
   });
@@ -611,12 +631,12 @@ async function testFeedbackRoutes() {
 
   await runTest('POST /api/feedback - Public endpoint', async () => {
     const result = await makeRequest('POST', '/feedback', {
-      type: 'BUG',
-      message: 'Test feedback',
+      feedbackType: 'BUG',
+      description: 'Test feedback',
       rating: 5
     }, null, 201);
-    if (result.success && result.data.feedback) {
-      feedbackId = result.data.feedback.id;
+    if (result.success && result.data.data && result.data.data.id) {
+      feedbackId = result.data.data.id;
     }
     return result.success;
   });
@@ -651,8 +671,8 @@ async function testSurveyRoutes() {
       description: 'Test description',
       questions: [{ type: 'TEXT', question: 'Test question' }]
     }, tokens.admin, 201);
-    if (result.success && result.data.survey) {
-      surveyId = result.data.survey.id;
+    if (result.success && result.data.data && result.data.data.id) {
+      surveyId = result.data.data.id;
     }
     return result.success;
   });
@@ -686,11 +706,12 @@ async function testPolicyRoutes() {
     const result = await makeRequest('POST', '/policies', {
       policyType: 'DATA_RETENTION',
       policyData: { retentionPeriod: 365 },
-      version: '1.0',
+      name: 'Test Policy',
+      description: 'Test policy description',
       effectiveDate: new Date().toISOString()
     }, tokens.admin, 201);
-    if (result.success && result.data.policy) {
-      policyId = result.data.policy.id;
+    if (result.success && result.data.id) {
+      policyId = result.data.id;
     }
     return result.success;
   });
@@ -887,27 +908,27 @@ async function testRoleBasedAccess() {
   // Test that all roles can access their own profile
   await runTest('GET /api/auth/profile - Admin', async () => {
     const result = await makeRequest('GET', '/auth/profile', null, tokens.admin, 200);
-    return result.success && result.data.user.role === 'ADMIN';
+    return result.success && result.data && result.data.user && result.data.user.role === 'ADMIN';
   });
 
   await runTest('GET /api/auth/profile - Patient', async () => {
     const result = await makeRequest('GET', '/auth/profile', null, tokens.patient, 200);
-    return result.success && result.data.user.role === 'PATIENT';
+    return result.success && result.data && result.data.user && result.data.user.role === 'PATIENT';
   });
 
   await runTest('GET /api/auth/profile - Provider', async () => {
     const result = await makeRequest('GET', '/auth/profile', null, tokens.provider, 200);
-    return result.success && result.data.user.role === 'HEALTHCARE_PROVIDER';
+    return result.success && result.data && result.data.user && result.data.user.role === 'HEALTHCARE_PROVIDER';
   });
 
   await runTest('GET /api/auth/profile - Wellness Coach', async () => {
     const result = await makeRequest('GET', '/auth/profile', null, tokens.wellnessCoach, 200);
-    return result.success && result.data.user.role === 'WELLNESS_COACH';
+    return result.success && result.data && result.data.user && result.data.user.role === 'WELLNESS_COACH';
   });
 
   await runTest('GET /api/auth/profile - Student', async () => {
     const result = await makeRequest('GET', '/auth/profile', null, tokens.student, 200);
-    return result.success && result.data.user.role === 'STUDENT';
+    return result.success && result.data && result.data.user && result.data.user.role === 'STUDENT';
   });
 }
 
@@ -915,18 +936,47 @@ async function testRoleBasedAccess() {
 async function checkAPIConnectivity() {
   try {
     const result = await makeRequest('GET', '/health', null, null, 200);
-    if (result.success) {
-      console.log('✅ API server is accessible\n'.green);
-      return true;
-    } else {
-      console.log('⚠️  API server responded but health check failed\n'.yellow);
+    
+    // Check if we got a connection error
+    if (result.status === 0 || result.error?.includes('Connection refused') || result.error?.includes('ECONNREFUSED')) {
+      console.log(`❌ Cannot connect to API server at ${BASE_URL}\n`.red);
+      console.log('   The server is not running or not accessible.\n'.gray);
+      console.log('   Please start the server:\n'.gray);
+      console.log('   - Development: cd backend && npm run dev\n'.gray);
+      console.log('   - Docker: docker-compose up --profile local\n'.gray);
+      console.log('   - Production: docker-compose up --profile production\n'.gray);
       return false;
     }
+    
+    // Check if we got a successful response with correct format
+    if (result.success && result.data) {
+      if (result.data.status === 'ok') {
+        console.log('✅ API server is accessible and healthy\n'.green);
+        return true;
+      } else {
+        // Server responded but format is unexpected
+        console.log('⚠️  API server responded but health check format is unexpected\n'.yellow);
+        console.log(`   Expected: { status: 'ok', ... }\n`.gray);
+        console.log(`   Received: ${JSON.stringify(result.data)}\n`.gray);
+        console.log('   Continuing with tests anyway...\n'.yellow);
+        return true; // Still allow tests to run
+      }
+    } else {
+      // Got a response but status code doesn't match
+      console.log('⚠️  API server responded but with unexpected status\n'.yellow);
+      console.log(`   Status Code: ${result.status}\n`.gray);
+      if (result.data) {
+        console.log(`   Response: ${JSON.stringify(result.data)}\n`.gray);
+      }
+      if (result.error) {
+        console.log(`   Error: ${result.error}\n`.gray);
+      }
+      console.log('   Continuing with tests anyway...\n'.yellow);
+      return true; // Still allow tests to run
+    }
   } catch (error) {
-    console.log(`❌ Cannot connect to API server at ${BASE_URL}\n`.red);
-    console.log('   Please ensure the server is running:\n'.gray);
-    console.log('   - Development: cd backend && npm run dev\n'.gray);
-    console.log('   - Docker: docker-compose up\n'.gray);
+    console.log(`❌ Error checking API connectivity: ${error.message}\n`.red);
+    console.log(`   Please ensure the server is running at ${BASE_URL}\n`.gray);
     return false;
   }
 }

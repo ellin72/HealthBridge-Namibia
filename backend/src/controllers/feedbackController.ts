@@ -14,12 +14,50 @@ export const submitFeedback = async (req: Request, res: Response) => {
     const { feedbackType, category, title, description, rating, metadata } = req.body;
     const userId = (req as any).user?.id;
 
+    // Validate required fields
+    if (!feedbackType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Feedback type is required'
+      });
+    }
+
+    if (!description) {
+      return res.status(400).json({
+        success: false,
+        message: 'Description is required'
+      });
+    }
+
+    // Generate title from description if not provided
+    const feedbackTitle = title || (description.length > 50 ? description.substring(0, 50) + '...' : description);
+
+    // Validate rating if provided
+    if (rating !== undefined && (isNaN(Number(rating)) || Number(rating) < 1 || Number(rating) > 5)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be a number between 1 and 5'
+      });
+    }
+
+    // Validate metadata is valid JSON if provided
+    if (metadata) {
+      try {
+        JSON.stringify(metadata);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid metadata format - must be valid JSON'
+        });
+      }
+    }
+
     const feedback = await prisma.userFeedback.create({
       data: {
         userId: userId || null,
         feedbackType,
         category,
-        title,
+        title: feedbackTitle,
         description,
         rating: rating ? Number(rating) : null,
         status: 'OPEN',

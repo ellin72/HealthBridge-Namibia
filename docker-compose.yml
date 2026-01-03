@@ -41,11 +41,11 @@ services:
       - ./backend:/app
       - /app/node_modules
       - ./backend/uploads:/app/uploads
+    command: sh -c "npm install && npm run dev"
     profiles:
       - local
       # Note: backend-prod is used for production profile, not this service
     deploy:
-      replicas: 1
       resources:
         limits:
           cpus: '1'
@@ -83,10 +83,11 @@ services:
 
   # Production scaling profile
   backend-prod:
-    extends: backend
-    container_name: healthbridge-api-prod
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    # Note: container_name removed because deploy.replicas requires auto-generated names
     environment:
-      # Override all environment variables for production
       # IMPORTANT: These should be set from environment variables or secrets manager in real production
       # For now, using placeholders that must be overridden via .env or docker-compose override files
       # WARNING: Default values below are placeholders and MUST be changed for production deployment
@@ -97,13 +98,19 @@ services:
       NODE_ENV: production
       FRONTEND_URL: ${PROD_FRONTEND_URL:-https://healthbridge.namibia.org}
       MOBILE_URL: ${PROD_MOBILE_URL:-https://mobile.healthbridge.namibia.org}
-    profiles:
-      - production
-    # Explicitly override ports to avoid conflicts if profiles are misconfigured
-    # Note: backend service is in 'local' profile only, backend-prod is in 'production' profile only
-    # They are mutually exclusive, but explicit port override prevents accidental conflicts
     ports:
       - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/uploads:/app/uploads
+    profiles:
+      - production
+    # Note: backend service is in 'local' profile only, backend-prod is in 'production' profile only
+    # They are mutually exclusive
     deploy:
       replicas: 3
       resources:
@@ -116,8 +123,21 @@ services:
 
   # Load testing profile
   postgres-load:
-    extends: postgres
+    image: postgres:14
     container_name: healthbridge-db-load
+    environment:
+      POSTGRES_USER: healthbridge
+      POSTGRES_PASSWORD: healthbridge123
+      POSTGRES_DB: healthbridge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U healthbridge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     profiles:
       - load-test
     deploy:
@@ -127,8 +147,27 @@ services:
           memory: 2G
 
   backend-load:
-    extends: backend
-    container_name: healthbridge-api-load
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    # Note: container_name removed because deploy.replicas requires auto-generated names
+    environment:
+      DATABASE_URL: postgresql://healthbridge:healthbridge123@postgres:5432/healthbridge?schema=public
+      JWT_SECRET: development-secret-key-change-in-production
+      JWT_EXPIRES_IN: 7d
+      PORT: 5000
+      NODE_ENV: development
+      FRONTEND_URL: http://localhost:3000
+      MOBILE_URL: http://localhost:8081
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/uploads:/app/uploads
     profiles:
       - load-test
     deploy:
@@ -137,6 +176,9 @@ services:
         limits:
           cpus: '1'
           memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
 volumes:
   postgres_data:

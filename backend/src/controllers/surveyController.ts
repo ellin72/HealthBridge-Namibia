@@ -5,6 +5,7 @@
 
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
+import { SurveyType } from '@prisma/client';
 
 /**
  * Create a new survey
@@ -13,11 +14,29 @@ export const createSurvey = async (req: Request, res: Response) => {
   try {
     const { title, description, surveyType, questions, targetAudience, startDate, endDate, isAnonymous } = req.body;
 
+    // Validate required fields
+    if (!title) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title is required'
+      });
+    }
+
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Questions array is required and must not be empty'
+      });
+    }
+
+    // Default surveyType if not provided
+    const defaultSurveyType: SurveyType = (surveyType as SurveyType) || 'USER_SATISFACTION';
+
     const survey = await prisma.survey.create({
       data: {
         title,
         description,
-        surveyType,
+        surveyType: defaultSurveyType,
         questions: JSON.stringify(questions),
         targetAudience: targetAudience ? JSON.stringify(targetAudience) : null,
         startDate: startDate ? new Date(startDate) : null,

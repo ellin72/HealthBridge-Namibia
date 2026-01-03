@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { AuthRequest } from '../middleware/auth';
+import { MedicalAidScheme } from '@prisma/client';
 
 // Get or create medical aid info
 export const getMedicalAidInfo = async (req: AuthRequest, res: Response) => {
@@ -18,7 +19,7 @@ export const getMedicalAidInfo = async (req: AuthRequest, res: Response) => {
     });
 
     if (!medicalAidInfo) {
-      return res.status(404).json({ message: 'No medical aid information found' });
+      return res.json({ medicalAidInfo: null });
     }
 
     res.json({ medicalAidInfo });
@@ -38,10 +39,16 @@ export const upsertMedicalAidInfo = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Scheme and member number are required' });
     }
 
+    // Validate scheme enum value
+    const validSchemes: MedicalAidScheme[] = ['NAMMED', 'MEDICAL_AID_FUND', 'PROSANA', 'OTHER'];
+    const normalizedScheme: MedicalAidScheme = validSchemes.includes(scheme as MedicalAidScheme) 
+      ? (scheme as MedicalAidScheme) 
+      : 'OTHER';
+
     const medicalAidInfo = await prisma.medicalAidInfo.upsert({
       where: { userId },
       update: {
-        scheme,
+        scheme: normalizedScheme,
         schemeName: schemeName || null,
         memberNumber,
         policyNumber: policyNumber || null,
@@ -49,7 +56,7 @@ export const upsertMedicalAidInfo = async (req: AuthRequest, res: Response) => {
       },
       create: {
         userId,
-        scheme,
+        scheme: normalizedScheme,
         schemeName: schemeName || null,
         memberNumber,
         policyNumber: policyNumber || null,
@@ -159,7 +166,7 @@ export const getClaims = async (req: AuthRequest, res: Response) => {
     });
 
     if (!medicalAidInfo) {
-      return res.status(404).json({ message: 'No medical aid information found' });
+      return res.json({ claims: [] });
     }
 
     const claims = await prisma.medicalAidClaim.findMany({

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../utils/prisma';
 import { generateToken } from '../utils/jwt';
+import { AuthRequest } from '../middleware/auth';
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -110,8 +111,12 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const getProfile = async (req: any, res: Response) => {
+export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: {
@@ -129,7 +134,7 @@ export const getProfile = async (req: any, res: Response) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json(user);
+    res.json({ user });
   } catch (error: any) {
     console.error('Get profile error:', error);
     res.status(500).json({ message: 'Failed to get profile', error: error.message });
