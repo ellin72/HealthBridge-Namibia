@@ -11,6 +11,7 @@ import { generateReceipt } from '../utils/receiptGenerator';
 import { 
   storePendingCallback, 
   getPendingCallback, 
+  peekPendingCallback,
   removePendingCallback 
 } from '../utils/pendingPaymentCallbacks';
 
@@ -100,8 +101,10 @@ async function processPendingCallback(
       }
     }
 
-    // Note: Callback was already removed from map by getPendingCallback() when it was retrieved
-    // No need to call removePendingCallback() here
+    // Remove callback from map after successful processing
+    // This ensures the callback is only removed after successful completion
+    // If processing fails, the callback remains in the map for retry
+    removePendingCallback(payment.paymentReference || undefined, payment.transactionId || undefined);
 
     console.log(`Successfully processed pending callback for payment: ${paymentId}`, {
       status: paymentStatus,
@@ -265,30 +268,43 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
 
     // Check for pending callbacks that may have arrived before payment record creation
     // Process them asynchronously to update the payment status
-    const pendingCallback = getPendingCallback(payment.paymentReference || undefined, payment.transactionId || undefined);
+    // Use peekPendingCallback first to check if callback exists without removing it
+    const pendingCallback = peekPendingCallback(payment.paymentReference || undefined, payment.transactionId || undefined);
     if (pendingCallback) {
       console.log(`Found pending callback for newly created payment: ${payment.id}`, {
         paymentReference: payment.paymentReference,
         transactionId: payment.transactionId
       });
       
-      // Process the pending callback asynchronously (don't block the response)
-      // Use setImmediate to ensure it runs after the response is sent, but still track errors
-      // Wrap in Promise.resolve().catch() to handle unhandled promise rejections
-      setImmediate(() => {
-        Promise.resolve(processPendingCallback(payment.id, pendingCallback)).catch((error: any) => {
-          // Log error with payment context for debugging
-          console.error(`Error processing pending callback for payment ${payment.id}:`, {
-            error: error.message,
-            stack: error.stack,
-            paymentReference: payment.paymentReference,
-            transactionId: payment.transactionId,
-            callbackStatus: pendingCallback.status
+      // Get and remove the callback atomically to prevent duplicate processing
+      // This ensures only one process can retrieve and process the callback
+      const callbackToProcess = getPendingCallback(payment.paymentReference || undefined, payment.transactionId || undefined);
+      if (callbackToProcess) {
+        // Process the pending callback asynchronously (don't block the response)
+        // Use setImmediate to ensure it runs after the response is sent, but still track errors
+        // Wrap in Promise.resolve().catch() to handle unhandled promise rejections
+        setImmediate(() => {
+          Promise.resolve(processPendingCallback(payment.id, callbackToProcess)).catch((error: any) => {
+            // Log error with payment context for debugging
+            console.error(`Error processing pending callback for payment ${payment.id}:`, {
+              error: error.message,
+              stack: error.stack,
+              paymentReference: payment.paymentReference,
+              transactionId: payment.transactionId,
+              callbackStatus: callbackToProcess.status
+            });
+            // If processing fails, re-store the callback so it can be retried
+            // This prevents the callback from being permanently lost
+            storePendingCallback(
+              callbackToProcess.paymentReference,
+              callbackToProcess.transactionId,
+              callbackToProcess.status,
+              callbackToProcess.metadata
+            );
+            console.log(`Re-stored pending callback after processing failure for payment ${payment.id}`);
           });
-          // Note: We don't throw here to avoid unhandled promise rejection
-          // The payment record exists, so the callback can be retried by the gateway
         });
-      });
+      }
     }
 
     // Update invoice if payment completed
@@ -505,10 +521,37 @@ export const processPaymentCallback = async (req: Request, res: Response) => {
               }
 
               if (retryPayment) {
-                console.log(`Found payment on retry, processing pending callback: ${retryPayment.id}`);
-                const pendingCallback = getPendingCallback(paymentReference, transactionId);
-                if (pendingCallback) {
-                  await processPendingCallback(retryPayment.id, pendingCallback);
+                console.log(`Found payment on retry, checking for pending callback: ${retryPayment.id}`);
+                // Use peekPendingCallback to check if callback exists without removing it
+                // This prevents race conditions where createPayment already retrieved it
+                const pendingCallbackExists = peekPendingCallback(paymentReference, transactionId);
+                if (pendingCallbackExists) {
+                  // Get and remove the callback atomically to prevent duplicate processing
+                  const pendingCallback = getPendingCallback(paymentReference, transactionId);
+                  if (pendingCallback) {
+                    try {
+                      await processPendingCallback(retryPayment.id, pendingCallback);
+                    } catch (error: any) {
+                      // If processing fails, re-store the callback so it can be retried
+                      // This prevents the callback from being permanently lost
+                      console.error(`Error processing pending callback in retry logic for payment ${retryPayment.id}:`, {
+                        error: error.message,
+                        stack: error.stack,
+                        paymentReference,
+                        transactionId
+                      });
+                      storePendingCallback(
+                        pendingCallback.paymentReference,
+                        pendingCallback.transactionId,
+                        pendingCallback.status,
+                        pendingCallback.metadata
+                      );
+                      console.log(`Re-stored pending callback after processing failure in retry logic for payment ${retryPayment.id}`);
+                      throw error; // Re-throw to be caught by outer catch
+                    }
+                  }
+                } else {
+                  console.log(`No pending callback found for payment ${retryPayment.id} - may have been processed by createPayment`);
                 }
               }
             } catch (error: any) {

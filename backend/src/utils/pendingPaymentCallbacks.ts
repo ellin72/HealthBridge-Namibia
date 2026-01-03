@@ -76,10 +76,10 @@ export function storePendingCallback(
 }
 
 /**
- * Get and remove a pending callback if it exists
- * This function removes the callback from the map to prevent duplicate processing
+ * Peek at a pending callback without removing it
+ * Use this to check if a callback exists before processing
  */
-export function getPendingCallback(
+export function peekPendingCallback(
   paymentReference?: string,
   transactionId?: string
 ): PendingCallback | null {
@@ -101,9 +101,31 @@ export function getPendingCallback(
     return null;
   }
 
+  return callback;
+}
+
+/**
+ * Get and remove a pending callback if it exists
+ * This function removes the callback from the map to prevent duplicate processing
+ * IMPORTANT: Only call this when you're about to process the callback immediately.
+ * If processing fails, the callback will be lost. Consider using peekPendingCallback
+ * first and only removing after successful processing.
+ */
+export function getPendingCallback(
+  paymentReference?: string,
+  transactionId?: string
+): PendingCallback | null {
+  const callback = peekPendingCallback(paymentReference, transactionId);
+  if (!callback) {
+    return null;
+  }
+
   // Remove callback from map to prevent duplicate processing
   // This ensures the callback can only be processed once
-  pendingCallbacks.delete(key);
+  const key = getCallbackKey(paymentReference, transactionId);
+  if (key) {
+    pendingCallbacks.delete(key);
+  }
   
   return callback;
 }

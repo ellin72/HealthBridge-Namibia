@@ -590,7 +590,7 @@ async function testMedicalAidRoutes() {
 
   await runTest('POST /api/medical-aid', async () => {
     const result = await makeRequest('POST', '/medical-aid', {
-      scheme: 'TEST_SCHEME',
+      scheme: 'NAMMED',
       schemeName: 'Test Scheme',
       memberNumber: '123456',
       policyNumber: 'POL-123456'
@@ -614,11 +614,13 @@ async function testPaymentRoutes() {
   });
 
   await runTest('POST /api/payments/callback - Public endpoint', async () => {
+    // Test callback for non-existent payment - should return 202 Accepted
+    // This tests the race condition handling where callback arrives before payment record
     const result = await makeRequest('POST', '/payments/callback', {
       paymentReference: `PAY-${Date.now()}-TEST`,
       transactionId: 'test-123',
       status: 'success'
-    }, null, 200);
+    }, null, 202); // Expect 202 Accepted when payment doesn't exist yet
     return result.success;
   });
 }
@@ -678,11 +680,31 @@ async function testSurveyRoutes() {
   });
 
   await runTest('GET /api/surveys/public/:id - Public', async () => {
-    if (surveyId) {
-      const result = await makeRequest('GET', `/surveys/public/${surveyId}`, null, null, 200);
-      return result.success;
+    // Create a new survey specifically for public access testing
+    // Public surveys must be ACTIVE and anonymous
+    const publicSurveyResult = await makeRequest('POST', '/surveys', {
+      title: 'Public Test Survey',
+      description: 'Test description for public survey',
+      questions: [{ type: 'TEXT', question: 'Test question' }],
+      isAnonymous: true  // Set anonymous during creation
+    }, tokens.admin, 201);
+    
+    if (publicSurveyResult.success && publicSurveyResult.data.data && publicSurveyResult.data.data.id) {
+      const publicSurveyId = publicSurveyResult.data.data.id;
+      
+      // Update status to ACTIVE (createSurvey always defaults to DRAFT)
+      const updateResult = await makeRequest('PATCH', `/surveys/${publicSurveyId}/status`, {
+        status: 'ACTIVE'
+      }, tokens.admin, 200);
+      
+      if (updateResult.success) {
+        // Now test the public endpoint - should work since survey is ACTIVE and anonymous
+        const result = await makeRequest('GET', `/surveys/public/${publicSurveyId}`, null, null, 200);
+        return result.success;
+      }
+      return false; // Failed to update survey status
     }
-    return true; // Skip if no survey created
+    return false; // Failed to create public survey
   });
 
   await runTest('GET /api/surveys - Protected', async () => {

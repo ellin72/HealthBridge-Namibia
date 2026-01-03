@@ -18,11 +18,9 @@ export const getMedicalAidInfo = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    if (!medicalAidInfo) {
-      return res.status(404).json({ message: 'No medical aid information found' });
-    }
-
-    res.json({ medicalAidInfo });
+    // Return 200 with null if no medical aid info exists (instead of 404)
+    // This allows the frontend to handle the empty state gracefully
+    res.json({ medicalAidInfo: medicalAidInfo || null });
   } catch (error: any) {
     console.error('Get medical aid info error:', error);
     res.status(500).json({ message: 'Failed to fetch medical aid information', error: error.message });
@@ -170,8 +168,10 @@ export const getClaims = async (req: AuthRequest, res: Response) => {
       where: { userId },
     });
 
+    // Return empty array if no medical aid info exists (instead of 404)
+    // This allows the frontend to handle the empty state gracefully
     if (!medicalAidInfo) {
-      return res.status(404).json({ message: 'No medical aid information found' });
+      return res.json({ claims: [] });
     }
 
     const claims = await prisma.medicalAidClaim.findMany({
