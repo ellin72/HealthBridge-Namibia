@@ -315,6 +315,14 @@ export const processPaymentCallback = async (req: Request, res: Response) => {
   try {
     const { paymentReference, transactionId, status, metadata } = req.body;
 
+    // Validate that at least one identifier is provided
+    if (!paymentReference && !transactionId) {
+      return res.status(400).json({ 
+        message: 'Invalid callback: paymentReference or transactionId is required',
+        error: 'Missing payment identifier'
+      });
+    }
+
     // Try to find payment by paymentReference or transactionId
     let payment = null;
     if (paymentReference) {
@@ -330,9 +338,14 @@ export const processPaymentCallback = async (req: Request, res: Response) => {
     }
 
     if (!payment) {
-      // For callbacks from external services, acknowledge even if payment not found
-      // This prevents external services from retrying
-      return res.status(200).json({ message: 'Callback received', acknowledged: true });
+      // Log the missing payment for investigation but acknowledge to prevent retries
+      // Only acknowledge if valid identifiers were provided (already validated above)
+      console.warn(`Payment callback received for non-existent payment:`, { paymentReference, transactionId });
+      return res.status(200).json({ 
+        message: 'Callback received', 
+        acknowledged: true,
+        warning: 'Payment not found in system'
+      });
     }
 
     // Handle different status formats

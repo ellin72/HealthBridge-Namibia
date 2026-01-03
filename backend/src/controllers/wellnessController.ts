@@ -26,7 +26,7 @@ export const createWellnessContent = async (req: AuthRequest, res: Response) => 
         imageUrl,
         videoUrl,
         authorId,
-        isPublished: isPublished !== undefined ? isPublished : true // Default to published for easier testing
+        isPublished: isPublished !== undefined ? isPublished : false // Default to draft - content must be explicitly published
       },
       include: {
         author: {

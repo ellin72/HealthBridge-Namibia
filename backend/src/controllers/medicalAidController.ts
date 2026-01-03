@@ -19,7 +19,7 @@ export const getMedicalAidInfo = async (req: AuthRequest, res: Response) => {
     });
 
     if (!medicalAidInfo) {
-      return res.json({ medicalAidInfo: null });
+      return res.status(404).json({ message: 'No medical aid information found' });
     }
 
     res.json({ medicalAidInfo });
@@ -39,11 +39,16 @@ export const upsertMedicalAidInfo = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Scheme and member number are required' });
     }
 
-    // Validate scheme enum value
+    // Validate scheme enum value - return error if invalid instead of silently converting
     const validSchemes: MedicalAidScheme[] = ['NAMMED', 'MEDICAL_AID_FUND', 'PROSANA', 'OTHER'];
-    const normalizedScheme: MedicalAidScheme = validSchemes.includes(scheme as MedicalAidScheme) 
-      ? (scheme as MedicalAidScheme) 
-      : 'OTHER';
+    if (!validSchemes.includes(scheme as MedicalAidScheme)) {
+      return res.status(400).json({ 
+        message: 'Invalid medical aid scheme', 
+        error: `Scheme must be one of: ${validSchemes.join(', ')}`,
+        provided: scheme
+      });
+    }
+    const normalizedScheme: MedicalAidScheme = scheme as MedicalAidScheme;
 
     const medicalAidInfo = await prisma.medicalAidInfo.upsert({
       where: { userId },
@@ -166,7 +171,7 @@ export const getClaims = async (req: AuthRequest, res: Response) => {
     });
 
     if (!medicalAidInfo) {
-      return res.json({ claims: [] });
+      return res.status(404).json({ message: 'No medical aid information found' });
     }
 
     const claims = await prisma.medicalAidClaim.findMany({
