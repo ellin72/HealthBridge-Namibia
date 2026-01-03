@@ -70,12 +70,19 @@ npm run test:legacy
 # API URL (default: http://localhost:5000/api)
 API_URL=http://localhost:5000/api
 
-# Test database URL (optional, uses DATABASE_URL if not set)
+# Database URL for tests (required for database cleanup)
+# If not set, defaults to: postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public
+# You can override with TEST_DATABASE_URL or DATABASE_URL
+DATABASE_URL=postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public
+
+# Or use TEST_DATABASE_URL (takes precedence over DATABASE_URL)
 TEST_DATABASE_URL=postgresql://user:pass@localhost:5432/testdb
 
 # JWT Secret for testing
 JWT_SECRET=test-jwt-secret-key
 ```
+
+**Note:** If `DATABASE_URL` is not set, database cleanup operations will be skipped (tests will still run, but cleanup warnings will appear). To enable cleanup, set `DATABASE_URL` to point to your test database.
 
 ### Jest Configuration
 

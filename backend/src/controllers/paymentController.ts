@@ -125,6 +125,15 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
     const ipAddress = req.ip || req.headers['x-forwarded-for'] as string;
     const userAgent = req.headers['user-agent'];
 
+    console.log('Payment request received:', {
+      userId,
+      invoiceId,
+      appointmentId,
+      amount,
+      method,
+      currency
+    });
+
     if (!amount || amount <= 0) {
       return res.status(400).json({ message: 'Valid amount is required' });
     }
@@ -135,6 +144,8 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
 
     // Check if invoice exists and get details
     let invoice = null;
+    let finalAmount = amount; // Default to provided amount
+    
     if (invoiceId) {
       invoice = await prisma.billingInvoice.findFirst({
         where: { id: invoiceId, patientId: userId },
@@ -142,16 +153,56 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
       });
 
       if (!invoice) {
-        return res.status(404).json({ message: 'Invoice not found' });
+        console.error('Invoice not found:', { invoiceId, userId });
+        return res.status(404).json({ 
+          message: 'Invoice not found',
+          details: 'The invoice ID provided does not exist or does not belong to you'
+        });
       }
 
       if (invoice.status === 'PAID') {
         return res.status(400).json({ message: 'Invoice already paid' });
       }
 
-      // Use invoice amount if provided
-      if (Math.abs(amount - invoice.total) > 0.01) {
-        return res.status(400).json({ message: 'Payment amount does not match invoice total' });
+      // Use invoice amount if provided - allow small rounding differences
+      const amountDifference = Math.abs(amount - invoice.total);
+      if (amountDifference > 0.01) {
+        console.error('Amount mismatch:', {
+          providedAmount: amount,
+          invoiceTotal: invoice.total,
+          difference: amountDifference
+        });
+        return res.status(400).json({ 
+          message: 'Payment amount does not match invoice total',
+          details: `Expected ${invoice.currency} ${invoice.total.toFixed(2)}, but received ${amount.toFixed(2)}`
+        });
+      }
+      
+      // Use invoice amount to ensure exact match
+      finalAmount = invoice.total;
+    } else if (appointmentId) {
+      // If no invoiceId but appointmentId is provided, try to find the invoice for this appointment
+      invoice = await prisma.billingInvoice.findFirst({
+        where: { 
+          appointmentId: appointmentId,
+          patientId: userId,
+          status: { not: 'PAID' }
+        },
+        include: { patient: true, provider: true }
+      });
+      
+      if (invoice) {
+        // Use invoice amount if found
+        const amountDifference = Math.abs(amount - invoice.total);
+        if (amountDifference > 0.01) {
+          console.warn('Amount mismatch with appointment invoice:', {
+            providedAmount: amount,
+            invoiceTotal: invoice.total,
+            difference: amountDifference
+          });
+        }
+        // Use invoice amount to ensure exact match
+        finalAmount = invoice.total;
       }
     }
 
@@ -166,8 +217,8 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if 2FA is required
-    const requires2FA = await is2FAEnabled(userId) || amount > 5000 || fraudCheck.flagged;
+    // Check if 2FA is required (use finalAmount for threshold check)
+    const requires2FA = await is2FAEnabled(userId) || finalAmount > 5000 || fraudCheck.flagged;
     
     if (requires2FA) {
       if (!twoFactorToken) {
@@ -177,9 +228,9 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
         const payment = await prisma.payment.create({
           data: {
             userId,
-            invoiceId: invoiceId || null,
+            invoiceId: invoice?.id || invoiceId || null,
             appointmentId: appointmentId || null,
-            amount,
+            amount: finalAmount,
             currency,
             method: method as PaymentMethod,
             status: 'PENDING',
@@ -220,33 +271,40 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
       select: { email: true, phone: true, firstName: true, lastName: true }
     });
 
-    // Process payment through gateway
+    // Process payment through gateway (finalAmount is already set above)
     const gatewayResponse = await paymentGateway.processPayment({
-      amount,
+      amount: finalAmount,
       currency,
       method,
       reference: paymentReference,
       customerEmail: user?.email,
       customerPhone: user?.phone || undefined,
       description: invoice ? `Invoice ${invoice.invoiceNumber}` : 'Payment',
-      returnUrl: `${process.env.FRONTEND_URL}/payment/success`,
-      cancelUrl: `${process.env.FRONTEND_URL}/payment/cancel`
+      returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/success`,
+      cancelUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/cancel`
     });
 
     if (!gatewayResponse.success) {
+      console.error('Payment gateway error:', {
+        method,
+        amount: finalAmount,
+        currency,
+        error: gatewayResponse.error
+      });
       return res.status(400).json({
         message: 'Payment gateway error',
-        error: gatewayResponse.error
+        error: gatewayResponse.error || 'Failed to process payment. Please check payment method configuration.',
+        details: `The ${method} payment gateway is not properly configured or returned an error.`
       });
     }
 
-    // Create payment record
+    // Create payment record - use finalAmount (invoice total if available)
     const payment = await prisma.payment.create({
       data: {
         userId,
-        invoiceId: invoiceId || null,
+        invoiceId: invoice?.id || invoiceId || null,
         appointmentId: appointmentId || null,
-        amount,
+        amount: finalAmount,
         currency,
         method: method as PaymentMethod,
         status: gatewayResponse.transactionId ? 'COMPLETED' : 'PENDING',

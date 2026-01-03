@@ -166,10 +166,18 @@ const Appointments: React.FC = () => {
           // Get invoice ID from the appointment response
           const invoiceId = appointmentResponse.data.invoice?.id;
           
+          if (!invoiceId) {
+            console.warn('No invoice ID in appointment response:', appointmentResponse.data);
+            throw new Error('Invoice was not created with the appointment. Please contact support.');
+          }
+          
+          // Use invoice total if available, otherwise use the fee
+          const paymentAmount = appointmentResponse.data.invoice?.total || fee;
+          
           const paymentResponse = await api.post('/payments', {
             invoiceId: invoiceId,
             appointmentId: appointmentResponse.data.appointment.id,
-            amount: fee,
+            amount: paymentAmount,
             method: data.paymentMethod,
             currency: currency
           });
@@ -181,9 +189,19 @@ const Appointments: React.FC = () => {
           };
         } catch (paymentError: any) {
           console.error('Payment error:', paymentError);
+          // Extract error message from response
+          const errorMessage = paymentError.response?.data?.message || 
+                              paymentError.response?.data?.error || 
+                              paymentError.message || 
+                              'Payment processing failed';
+          const errorDetails = paymentError.response?.data?.details || '';
+          
           // Payment failed, but appointment is created
           // In production, you might want to rollback the appointment or handle this differently
-          throw new Error('Appointment created but payment failed. Please contact support.');
+          throw new Error(
+            `Appointment created but payment failed: ${errorMessage}${errorDetails ? `. ${errorDetails}` : ''}. ` +
+            'Your appointment is still scheduled. Please complete payment from the billing page or contact support.'
+          );
         }
       }
       
@@ -210,7 +228,9 @@ const Appointments: React.FC = () => {
       },
       onError: (error: any) => {
         console.error('Create appointment error:', error);
-        alert(error.message || error.response?.data?.message || 'Failed to create appointment. Please try again.');
+        const errorMessage = error.message || error.response?.data?.message || 'Failed to create appointment. Please try again.';
+        const errorDetails = error.response?.data?.details || '';
+        alert(`${errorMessage}${errorDetails ? `\n\nDetails: ${errorDetails}` : ''}`);
       }
     }
   );

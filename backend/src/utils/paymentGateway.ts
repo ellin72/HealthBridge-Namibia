@@ -85,11 +85,19 @@ class PaymentGatewayService {
     // In production, this would make actual API calls to PayToday
     // For now, we'll simulate the response
     
+    // In development, allow payments without API keys (simulated)
+    const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+    
     if (!this.config.paytodayApiKey || !this.config.paytodayApiSecret) {
-      return {
-        success: false,
-        error: 'PayToday API credentials not configured'
-      };
+      if (isDevelopment) {
+        // In development, simulate successful payment
+        console.warn('PayToday API credentials not configured - simulating payment in development mode');
+      } else {
+        return {
+          success: false,
+          error: 'PayToday API credentials not configured. Please configure PAYTODAY_API_KEY and PAYTODAY_API_SECRET environment variables.'
+        };
+      }
     }
 
     // Generate secure transaction ID
@@ -122,11 +130,18 @@ class PaymentGatewayService {
    * SnapScan Payment Processing
    */
   private async processSnapScan(request: PaymentRequest): Promise<PaymentResponse> {
+    const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+    
     if (!this.config.snapscanApiKey || !this.config.snapscanApiSecret) {
-      return {
-        success: false,
-        error: 'SnapScan API credentials not configured'
-      };
+      if (isDevelopment) {
+        // In development, simulate successful payment
+        console.warn('SnapScan API credentials not configured - simulating payment in development mode');
+      } else {
+        return {
+          success: false,
+          error: 'SnapScan API credentials not configured. Please configure SNAPSCAN_API_KEY and SNAPSCAN_API_SECRET environment variables.'
+        };
+      }
     }
 
     const transactionId = `SS-${Date.now()}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
@@ -165,11 +180,31 @@ class PaymentGatewayService {
    * Bank Transfer Processing
    */
   private async processBankTransfer(request: PaymentRequest): Promise<PaymentResponse> {
+    const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+    
     if (!this.config.bankTransferDetails) {
-      return {
-        success: false,
-        error: 'Bank transfer details not configured'
-      };
+      if (isDevelopment) {
+        // In development, use default bank details
+        console.warn('Bank transfer details not configured - using default in development mode');
+        const defaultBankDetails = {
+          accountName: 'HealthBridge Namibia',
+          accountNumber: '1234567890',
+          bankName: 'Standard Bank',
+          branchCode: '123456'
+        };
+        
+        const transactionId = `BT-${Date.now()}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
+        return {
+          success: true,
+          transactionId,
+          instructions: `Please transfer NAD ${request.amount} to:\nAccount Name: ${defaultBankDetails.accountName}\nAccount Number: ${defaultBankDetails.accountNumber}\nBank: ${defaultBankDetails.bankName}\nBranch Code: ${defaultBankDetails.branchCode}\nReference: ${request.reference}`
+        };
+      } else {
+        return {
+          success: false,
+          error: 'Bank transfer details not configured. Please configure BANK_ACCOUNT_NAME, BANK_ACCOUNT_NUMBER, BANK_NAME, and BANK_BRANCH_CODE environment variables.'
+        };
+      }
     }
 
     const transactionId = `BT-${Date.now()}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;

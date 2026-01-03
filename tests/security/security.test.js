@@ -87,27 +87,52 @@ describe('Security Tests', () => {
     });
 
     test('Public endpoints should work without authentication', async () => {
-      const publicEndpoints = [
-        { path: '/auth/register', method: 'POST', protected: false },
-        { path: '/auth/login', method: 'POST', protected: false },
-        { path: '/feedback', method: 'POST', protected: false }
-      ];
+      // Test /auth/register with valid data (should succeed or return 400 for duplicate, not 401 for missing auth)
+      const registerResponse = await makeRequest(
+        'POST',
+        '/auth/register',
+        {
+          email: generateTestData('email'),
+          password: 'Test123!@#',
+          firstName: 'Test',
+          lastName: 'User',
+          role: 'PATIENT'
+        },
+        null,
+        { expectedStatus: [200, 201, 400] } // Should not return 401 (missing auth)
+      );
+      expect(registerResponse.status).not.toBe(401);
 
-      for (const endpoint of publicEndpoints) {
-        const response = await makeRequest(
-          endpoint.method,
-          endpoint.path,
-          endpoint.method === 'POST' ? {
-            email: generateTestData('email'),
+      // Test /auth/login with valid credentials from test user (should succeed, not 401 for missing auth)
+      if (testUsers.patient) {
+        const loginResponse = await makeRequest(
+          'POST',
+          '/auth/login',
+          {
+            email: testUsers.patient.email,
             password: 'Test123!@#'
-          } : null,
+          },
           null,
-          { expectedStatus: [200, 201, 400, 401] } // Accept various statuses for public endpoints
+          { expectedStatus: [200, 400] } // Should not return 401 (missing auth) - 401 only for invalid credentials
         );
-
-        // Should not require authentication (won't return 401)
-        expect(response.status).not.toBe(401);
+        // Login with valid credentials should return 200, not 401
+        // 401 would only occur for invalid credentials, not missing authentication
+        expect(loginResponse.status).not.toBe(401);
       }
+
+      // Test /feedback with valid data (should succeed, not 401 for missing auth)
+      const feedbackResponse = await makeRequest(
+        'POST',
+        '/feedback',
+        {
+          feedbackType: 'BUG',
+          description: 'Test feedback',
+          rating: 5
+        },
+        null,
+        { expectedStatus: [200, 201, 400] } // Should not return 401 (missing auth)
+      );
+      expect(feedbackResponse.status).not.toBe(401);
     });
   });
 

@@ -160,7 +160,8 @@ describe('API Routes', () => {
 
       expect(response.success).toBe(true);
       expect(response.status).toBe(200);
-      expect(Array.isArray(response.data)).toBe(true);
+      expect(response.data).toHaveProperty('payments');
+      expect(Array.isArray(response.data.payments)).toBe(true);
     });
 
     test('POST /api/payments/callback - Public endpoint', async () => {
@@ -286,8 +287,9 @@ describe('API Routes', () => {
 
       expect(response.success).toBe(true);
       expect(response.status).toBe(200);
-      expect(response.data.data).toHaveProperty('scheme');
-      expect(response.data.data.scheme).toBe('NAMMED');
+      expect(response.data).toHaveProperty('medicalAidInfo');
+      expect(response.data.medicalAidInfo).toHaveProperty('scheme');
+      expect(response.data.medicalAidInfo.scheme).toBe('NAMMED');
     });
 
     test('POST /api/medical-aid - Invalid scheme', async () => {
