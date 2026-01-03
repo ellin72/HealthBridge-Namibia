@@ -16,11 +16,16 @@ const router = express.Router();
 
 // Protected routes (require authentication)
 // Note: getActivePolicy requires authentication to protect sensitive policy information
-// IMPORTANT: Specific routes must come before dynamic routes to ensure correct matching
+// 
+// CRITICAL: Route order matters in Express - routes are matched sequentially
+// Static routes with specific paths MUST come before dynamic routes
+// Order: static routes -> routes with static prefixes -> fully dynamic routes
 router.post('/', authenticate, createPolicy);
 router.get('/', authenticate, getPolicies);
-router.get('/active/:policyType', authenticate, getActivePolicy); // Protected route for active policies
-router.get('/:id', authenticate, getPolicyById); // Dynamic route must come last
+// Static prefix route - MUST come before /:id to prevent /active/DATA_RETENTION from matching /:id
+router.get('/active/:policyType', authenticate, getActivePolicy);
+// Fully dynamic route - MUST come last to avoid intercepting static routes
+router.get('/:id', authenticate, getPolicyById);
 router.patch('/:id', authenticate, updatePolicy);
 
 export default router;

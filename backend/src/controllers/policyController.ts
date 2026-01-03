@@ -22,6 +22,7 @@ export const createPolicy = async (req: Request, res: Response) => {
     let retries = 0;
     let policy;
 
+    // Loop allows exactly maxRetries attempts (0 to maxRetries-1)
     while (retries < maxRetries) {
       try {
         policy = await prisma.$transaction(async (tx) => {
@@ -54,7 +55,10 @@ export const createPolicy = async (req: Request, res: Response) => {
       } catch (error: any) {
         // Check if it's a unique constraint violation (race condition)
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          // Increment retry count
           retries++;
+          // Check if we've exhausted retries AFTER incrementing
+          // This ensures we get exactly maxRetries attempts (retries 0 to maxRetries-1)
           if (retries >= maxRetries) {
             throw new Error('Failed to create policy after multiple retries due to concurrent requests');
           }

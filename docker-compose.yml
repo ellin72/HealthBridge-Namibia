@@ -88,11 +88,16 @@ services:
       dockerfile: Dockerfile
     # Note: container_name removed because deploy.replicas requires auto-generated names
     environment:
-      # IMPORTANT: These should be set from environment variables or secrets manager in real production
-      # For now, using placeholders that must be overridden via .env or docker-compose override files
-      # WARNING: Default values below are placeholders and MUST be changed for production deployment
-      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql://healthbridge:CHANGE_ME_DB_PASSWORD@postgres:5432/healthbridge?schema=public}
-      JWT_SECRET: ${PROD_JWT_SECRET:-CHANGE_ME_PRODUCTION_JWT_SECRET}
+      # CRITICAL SECURITY: These environment variables MUST be set - no fallback values allowed
+      # If these are not set, docker-compose will pass empty/undefined values
+      # The application should validate these are set and fail to start if missing
+      # Use docker-compose override files, .env files, or secrets management in production
+      # NEVER commit actual secrets to version control
+      # 
+      # Required variables (no defaults - will be empty/undefined if not set):
+      DATABASE_URL: ${PROD_DATABASE_URL}
+      JWT_SECRET: ${PROD_JWT_SECRET}
+      # Optional variables (with safe defaults):
       JWT_EXPIRES_IN: ${PROD_JWT_EXPIRES_IN:-7d}
       PORT: 5000
       NODE_ENV: production

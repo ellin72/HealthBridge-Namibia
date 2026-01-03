@@ -8,6 +8,111 @@ import { is2FAEnabled, verify2FAToken } from '../utils/twoFactorAuth';
 import { encryptCardToken, maskCardNumber } from '../utils/financialEncryption';
 import { sendPaymentConfirmation, sendReceiptEmail, sendReceiptSMS } from '../utils/notificationService';
 import { generateReceipt } from '../utils/receiptGenerator';
+import { 
+  storePendingCallback, 
+  getPendingCallback, 
+  removePendingCallback 
+} from '../utils/pendingPaymentCallbacks';
+
+/**
+ * Process a pending callback for an existing payment record
+ * This is called when a payment record is created and a pending callback exists
+ */
+async function processPendingCallback(
+  paymentId: string, 
+  callback: { status: string; metadata?: any; transactionId?: string }
+): Promise<void> {
+  try {
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { invoice: { include: { patient: true, provider: true } } }
+    });
+
+    if (!payment) {
+      console.error(`Payment not found when processing pending callback: ${paymentId}`);
+      return;
+    }
+
+    // Handle different status formats
+    let paymentStatus: PaymentStatus = 'PENDING';
+    if (callback.status === 'success' || callback.status === 'COMPLETED' || callback.status === 'completed') {
+      paymentStatus = 'COMPLETED';
+    } else if (callback.status === 'failed' || callback.status === 'FAILED' || callback.status === 'rejected') {
+      paymentStatus = 'FAILED';
+    } else if (callback.status === 'PENDING' || callback.status === 'pending') {
+      paymentStatus = 'PENDING';
+    }
+
+    const updatedPayment = await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: paymentStatus as PaymentStatus,
+        transactionId: callback.transactionId || payment.transactionId,
+        metadata: callback.metadata ? JSON.stringify(callback.metadata) : payment.metadata,
+        completedAt: paymentStatus === 'COMPLETED' ? new Date() : null,
+      },
+    });
+
+    // Update invoice if payment completed
+    if (payment.invoice && paymentStatus === 'COMPLETED') {
+      await prisma.billingInvoice.update({
+        where: { id: payment.invoice.id },
+        data: {
+          status: 'PAID',
+          paidDate: new Date()
+        }
+      });
+
+      // Generate receipt and send notifications
+      if (payment.invoice) {
+        const receipt = await generateReceipt(payment.invoice, updatedPayment);
+        
+        await sendReceiptEmail({
+          invoiceNumber: payment.invoice.invoiceNumber,
+          receiptNumber: receipt.receiptNumber,
+          patientName: `${payment.invoice.patient.firstName} ${payment.invoice.patient.lastName}`,
+          patientEmail: payment.invoice.patient.email,
+          patientPhone: payment.invoice.patient.phone || undefined,
+          amount: updatedPayment.amount,
+          currency: updatedPayment.currency,
+          paymentMethod: updatedPayment.method,
+          transactionId: updatedPayment.transactionId || undefined,
+          items: JSON.parse(payment.invoice.items),
+          subtotal: payment.invoice.subtotal,
+          tax: payment.invoice.tax,
+          discount: payment.invoice.discount,
+          total: payment.invoice.total,
+          pdfUrl: receipt.pdfUrl
+        });
+
+        if (payment.invoice.patient.phone) {
+          await sendReceiptSMS({
+            invoiceNumber: payment.invoice.invoiceNumber,
+            receiptNumber: receipt.receiptNumber,
+            patientName: `${payment.invoice.patient.firstName} ${payment.invoice.patient.lastName}`,
+            patientPhone: payment.invoice.patient.phone,
+            amount: updatedPayment.amount,
+            currency: updatedPayment.currency,
+            paymentMethod: updatedPayment.method,
+            transactionId: updatedPayment.transactionId || undefined
+          });
+        }
+      }
+    }
+
+    // Remove pending callback after successful processing
+    removePendingCallback(payment.paymentReference || undefined, payment.transactionId || undefined);
+
+    console.log(`Successfully processed pending callback for payment: ${paymentId}`, {
+      status: paymentStatus,
+      paymentReference: payment.paymentReference,
+      transactionId: payment.transactionId
+    });
+  } catch (error: any) {
+    console.error(`Error processing pending callback for payment ${paymentId}:`, error);
+    throw error;
+  }
+}
 
 // Create payment with fraud detection and 2FA
 export const createPayment = async (req: AuthRequest, res: Response) => {
@@ -157,6 +262,21 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
 
     // Log audit
     await logFraudCheck(payment.id, fraudCheck, ipAddress, userAgent);
+
+    // Check for pending callbacks that may have arrived before payment record creation
+    // Process them asynchronously to update the payment status
+    const pendingCallback = getPendingCallback(payment.paymentReference || undefined, payment.transactionId || undefined);
+    if (pendingCallback) {
+      console.log(`Found pending callback for newly created payment: ${payment.id}`, {
+        paymentReference: payment.paymentReference,
+        transactionId: payment.transactionId
+      });
+      
+      // Process the pending callback asynchronously (don't block the response)
+      processPendingCallback(payment.id, pendingCallback).catch(error => {
+        console.error('Error processing pending callback:', error);
+      });
+    }
 
     // Update invoice if payment completed
     if (invoice && gatewayResponse.transactionId) {
@@ -338,10 +458,11 @@ export const processPaymentCallback = async (req: Request, res: Response) => {
     }
 
     if (!payment) {
-      // Payment not found - return error status so gateway retries
-      // This is critical: returning 200 would cause gateway to stop retrying, leading to lost transactions
-      // The gateway should have its own retry limits to prevent infinite retries
-      console.error(`Payment callback received for non-existent payment:`, { 
+      // Payment not found - store callback for later processing
+      // This handles race conditions where callback arrives before payment record is created
+      storePendingCallback(paymentReference, transactionId, status, metadata);
+      
+      console.warn(`Payment callback received for non-existent payment, stored for later processing:`, { 
         paymentReference, 
         transactionId,
         status,
@@ -349,11 +470,40 @@ export const processPaymentCallback = async (req: Request, res: Response) => {
         timestamp: new Date().toISOString()
       });
       
-      // Return 404 to indicate payment not found - gateway will retry
-      // This ensures legitimate payments that arrive before our record is created get processed
-      return res.status(404).json({ 
-        message: 'Payment not found',
-        error: 'Payment record does not exist in system',
+      // Try to find payment again after a short delay (in case it was just created)
+      // This handles the race condition where payment is created between our check and now
+      setTimeout(async () => {
+        try {
+          let retryPayment = null;
+          if (paymentReference) {
+            retryPayment = await prisma.payment.findFirst({
+              where: { paymentReference },
+              include: { invoice: { include: { patient: true, provider: true } } }
+            });
+          } else if (transactionId) {
+            retryPayment = await prisma.payment.findFirst({
+              where: { transactionId },
+              include: { invoice: { include: { patient: true, provider: true } } }
+            });
+          }
+
+          if (retryPayment) {
+            console.log(`Found payment on retry, processing pending callback: ${retryPayment.id}`);
+            const pendingCallback = getPendingCallback(paymentReference, transactionId);
+            if (pendingCallback) {
+              await processPendingCallback(retryPayment.id, pendingCallback);
+            }
+          }
+        } catch (error) {
+          console.error('Error retrying payment callback:', error);
+        }
+      }, 2000); // Wait 2 seconds before retry
+      
+      // Return 202 Accepted to indicate we received the callback and will process it
+      // Gateway will retry, and we'll also process it when payment record is created
+      return res.status(202).json({ 
+        message: 'Payment callback received, processing',
+        error: 'Payment record not yet available, will be processed when available',
         paymentReference: paymentReference || null,
         transactionId: transactionId || null
       });
@@ -378,6 +528,9 @@ export const processPaymentCallback = async (req: Request, res: Response) => {
         completedAt: paymentStatus === 'COMPLETED' ? new Date() : null,
       },
     });
+
+    // Remove pending callback since we've successfully processed it
+    removePendingCallback(payment.paymentReference || undefined, payment.transactionId || undefined);
 
     // Update invoice if payment completed
     if (payment.invoice && paymentStatus === 'COMPLETED') {

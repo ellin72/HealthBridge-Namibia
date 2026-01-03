@@ -103,7 +103,77 @@ export const getSurveys = async (req: Request, res: Response) => {
 };
 
 /**
- * Get survey by ID
+ * Get survey by ID (public access - validates survey is ACTIVE)
+ * Used for unauthenticated access to published surveys
+ */
+export const getPublicSurveyById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const survey = await prisma.survey.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { responses: true }
+        }
+      }
+    });
+
+    if (!survey) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    // CRITICAL: Public access should only allow ACTIVE surveys
+    // DRAFT and other statuses should remain private
+    if (survey.status !== 'ACTIVE') {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    // Check if survey has ended
+    if (survey.endDate && new Date(survey.endDate) < new Date()) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    // CRITICAL SECURITY: Public endpoint should only allow access to anonymous surveys
+    // Non-anonymous surveys require authentication and should use the protected endpoint
+    // Return 404 (not 403) to prevent information leakage through status code enumeration
+    if (!survey.isAnonymous) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...survey,
+        questions: JSON.parse(survey.questions),
+        targetAudience: survey.targetAudience ? JSON.parse(survey.targetAudience) : null,
+        responseCount: survey._count.responses
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch survey',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get survey by ID (authenticated access - allows all statuses)
+ * Used for authenticated users who may need to view DRAFT surveys
  */
 export const getSurveyById = async (req: Request, res: Response) => {
   try {
@@ -180,12 +250,20 @@ export const submitSurveyResponse = async (req: Request, res: Response) => {
       });
     }
 
-    // Validate: non-anonymous surveys require authentication
-    if (!survey.isAnonymous && !userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required for non-anonymous surveys'
-      });
+    // CRITICAL SECURITY: Validate authentication requirements
+    // If accessed via public route (no userId), survey MUST be anonymous
+    // If survey is not anonymous, authentication is required
+    if (!userId) {
+      // Unauthenticated access - only allowed for anonymous surveys
+      if (!survey.isAnonymous) {
+        return res.status(403).json({
+          success: false,
+          message: 'This survey requires authentication. Anonymous responses are not allowed.'
+        });
+      }
+    } else {
+      // Authenticated access - allowed for both anonymous and non-anonymous surveys
+      // (userId will be recorded for non-anonymous surveys)
     }
 
     // Validate JSON before database insertion

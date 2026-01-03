@@ -18,6 +18,8 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
     if (userRole === 'ADMIN') {
       // Admins can see all users - no restriction needed
       // where clause remains empty to allow all users
+      // Note: Role and search filters (lines 47-57) still apply to ADMIN queries
+      // This allows admins to filter users by role or search terms for administrative purposes
     } else if (userRole === 'PATIENT' || userRole === 'STUDENT') {
       // Patients/Students can only see themselves
       where.id = userId;
