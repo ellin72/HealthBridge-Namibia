@@ -25,10 +25,10 @@ jobs:
           cd ../frontend && npm ci
       
       - name: Run linting (Backend)
-        run: cd backend && npm run lint || true
+        run: cd backend && npm run lint
       
       - name: Run linting (Frontend)
-        run: cd frontend && npm run lint || true
+        run: cd frontend && npm run lint
       
       - name: Type check (Backend)
         run: cd backend && npx tsc --noEmit
@@ -66,6 +66,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend && npm ci
+          cd ../frontend && npm ci
       
       - name: Run database migrations
         run: |
@@ -152,13 +153,13 @@ jobs:
         run: |
           cd backend
           export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
-          npm test || true
+          npm test
       
       - name: Run integration tests
         run: |
           cd backend
           export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
-          npm run test:integration || true
+          npm run test:integration
 
   build:
     name: Build Application

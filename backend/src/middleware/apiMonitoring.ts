@@ -69,11 +69,15 @@ export const apiMonitoring = (req: Request, res: Response, next: NextFunction) =
     checkAlerts(metric);
 
     // Handle different calling patterns correctly
-    // If encoding is a function, it's actually the callback
+    // Pattern 1: end(callback) - chunk is a function, encoding is undefined
+    if (typeof chunk === 'function' && encoding === undefined && cb === undefined) {
+      return originalEnd(chunk);
+    }
+    // Pattern 2: end(chunk, callback) - encoding is a function
     if (typeof encoding === 'function') {
       return originalEnd(chunk, encoding);
     }
-    // Otherwise, use all three parameters
+    // Pattern 3: end() or end(chunk) or end(chunk, encoding) or end(chunk, encoding, cb)
     return originalEnd(chunk, encoding, cb);
   };
 

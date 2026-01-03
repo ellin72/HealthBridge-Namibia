@@ -338,13 +338,24 @@ export const processPaymentCallback = async (req: Request, res: Response) => {
     }
 
     if (!payment) {
-      // Log the missing payment for investigation but acknowledge to prevent retries
-      // Only acknowledge if valid identifiers were provided (already validated above)
-      console.warn(`Payment callback received for non-existent payment:`, { paymentReference, transactionId });
-      return res.status(200).json({ 
-        message: 'Callback received', 
-        acknowledged: true,
-        warning: 'Payment not found in system'
+      // Payment not found - return error status so gateway retries
+      // This is critical: returning 200 would cause gateway to stop retrying, leading to lost transactions
+      // The gateway should have its own retry limits to prevent infinite retries
+      console.error(`Payment callback received for non-existent payment:`, { 
+        paymentReference, 
+        transactionId,
+        status,
+        metadata,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Return 404 to indicate payment not found - gateway will retry
+      // This ensures legitimate payments that arrive before our record is created get processed
+      return res.status(404).json({ 
+        message: 'Payment not found',
+        error: 'Payment record does not exist in system',
+        paymentReference: paymentReference || null,
+        transactionId: transactionId || null
       });
     }
 

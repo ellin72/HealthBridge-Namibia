@@ -103,9 +103,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Production containers should NOT mount source code - only runtime data volumes
+    # The application is built into the image during docker build
     volumes:
-      - ./backend:/app
-      - /app/node_modules
       - ./backend/uploads:/app/uploads
     profiles:
       - production
