@@ -103,14 +103,6 @@ jobs:
           cd backend && npm audit --audit-level=high || true
           cd ../frontend && npm audit --audit-level=high || true
       
-      - name: Stop backend server
-        if: always()
-        run: |
-          if [ -f /tmp/backend.pid ]; then
-            kill $(cat /tmp/backend.pid) 2>/dev/null || true
-            rm /tmp/backend.pid
-          fi
-      
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.7.0
         continue-on-error: true
@@ -118,6 +110,14 @@ jobs:
           target: 'http://localhost:5000'
           rules_file_name: '.zap/rules.tsv'
           cmd_options: '-a'
+      
+      - name: Stop backend server
+        if: always()
+        run: |
+          if [ -f /tmp/backend.pid ]; then
+            kill $(cat /tmp/backend.pid) 2>/dev/null || true
+            rm /tmp/backend.pid
+          fi
 
   test:
     name: Run Tests
