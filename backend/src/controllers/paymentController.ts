@@ -100,8 +100,8 @@ async function processPendingCallback(
       }
     }
 
-    // Remove pending callback after successful processing
-    removePendingCallback(payment.paymentReference || undefined, payment.transactionId || undefined);
+    // Note: Callback was already removed from map by getPendingCallback() when it was retrieved
+    // No need to call removePendingCallback() here
 
     console.log(`Successfully processed pending callback for payment: ${paymentId}`, {
       status: paymentStatus,

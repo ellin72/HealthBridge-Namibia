@@ -33,6 +33,8 @@ function getCallbackKey(paymentReference?: string, transactionId?: string): stri
 
 /**
  * Store a pending callback for later processing
+ * Note: This function should only be called once per callback. The retry count tracks
+ * how many times the callback was stored, not how many times processing failed.
  */
 export function storePendingCallback(
   paymentReference: string | undefined,
@@ -46,30 +48,36 @@ export function storePendingCallback(
     return;
   }
 
-  // Check if callback already exists
+  // Check if callback already exists - if it does, don't overwrite it
+  // The existing callback should be processed, not replaced
   const existing = pendingCallbacks.get(key);
-  const retryCount = existing ? existing.retryCount + 1 : 0;
-
-  if (retryCount >= MAX_RETRIES) {
-    console.error(`Pending callback exceeded max retries: ${key}`, { paymentReference, transactionId });
-    pendingCallbacks.delete(key);
+  if (existing) {
+    // Callback already stored - don't overwrite or increment retry count
+    // The retry count should only increment when processing fails, not when storing
+    console.log(`Pending callback already exists: ${key}`, { 
+      paymentReference, 
+      transactionId, 
+      existingRetryCount: existing.retryCount 
+    });
     return;
   }
 
+  // Store new callback with retry count starting at 0
   pendingCallbacks.set(key, {
     paymentReference,
     transactionId,
     status,
     metadata,
     timestamp: new Date(),
-    retryCount
+    retryCount: 0
   });
 
-  console.log(`Stored pending callback: ${key}`, { paymentReference, transactionId, retryCount });
+  console.log(`Stored pending callback: ${key}`, { paymentReference, transactionId });
 }
 
 /**
  * Get and remove a pending callback if it exists
+ * This function removes the callback from the map to prevent duplicate processing
  */
 export function getPendingCallback(
   paymentReference?: string,
@@ -93,6 +101,10 @@ export function getPendingCallback(
     return null;
   }
 
+  // Remove callback from map to prevent duplicate processing
+  // This ensures the callback can only be processed once
+  pendingCallbacks.delete(key);
+  
   return callback;
 }
 
