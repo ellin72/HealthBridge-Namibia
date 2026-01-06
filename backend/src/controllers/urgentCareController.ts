@@ -204,7 +204,7 @@ export const getAllUrgentCareRequests = async (req: AuthRequest, res: Response) 
         },
       },
       orderBy: [
-        { urgency: 'asc' }, // Emergency first
+        { urgency: 'desc' }, // Emergency first
         { createdAt: 'asc' }, // Then by time
       ],
       take: Number(limit),
