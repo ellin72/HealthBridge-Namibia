@@ -12,6 +12,7 @@ import {
 const router = express.Router();
 
 router.post('/requests', authenticate, createUrgentCareRequest);
+// IMPORTANT: /requests/all must come before /requests to prevent /requests from matching /requests/all
 router.get('/requests/all', authenticate, getAllUrgentCareRequests);
 router.get('/requests', authenticate, getUrgentCareRequests);
 router.get('/requests/:id', authenticate, getUrgentCareRequestById);

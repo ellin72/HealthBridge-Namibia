@@ -140,16 +140,17 @@ export const updateWeightProgram = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Weight program not found' });
     }
 
+    const updateData: any = {};
+    if (programName !== undefined) updateData.programName = programName;
+    if (targetWeight !== undefined) updateData.targetWeight = targetWeight;
+    if (goals !== undefined) updateData.goals = goals ? JSON.stringify(goals) : null;
+    if (nutritionPlan !== undefined) updateData.nutritionPlan = nutritionPlan ? JSON.stringify(nutritionPlan) : null;
+    if (exercisePlan !== undefined) updateData.exercisePlan = exercisePlan ? JSON.stringify(exercisePlan) : null;
+    if (status !== undefined) updateData.status = status as WeightProgramStatus;
+
     const updated = await prisma.weightManagementProgram.update({
       where: { id },
-      data: {
-        programName,
-        targetWeight,
-        goals: goals ? JSON.stringify(goals) : undefined,
-        nutritionPlan: nutritionPlan ? JSON.stringify(nutritionPlan) : undefined,
-        exercisePlan: exercisePlan ? JSON.stringify(exercisePlan) : undefined,
-        status: status as WeightProgramStatus,
-      },
+      data: updateData,
     });
 
     res.json(updated);
