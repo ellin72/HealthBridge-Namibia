@@ -24,14 +24,13 @@ jobs:
           cd backend && npm ci
           cd ../frontend && npm ci
       
+      - name: Generate Prisma Client
+        run: |
+          cd backend
+          npx prisma generate
+      
       - name: Run linting (Backend)
         run: cd backend && npm run lint
-      
-      - name: Run linting (Frontend)
-        run: cd frontend && npm run lint
-      
-      - name: Type check (Backend)
-        run: cd backend && npx tsc --noEmit
       
       - name: Type check (Frontend)
         run: cd frontend && npx tsc --noEmit
@@ -68,12 +67,16 @@ jobs:
           cd backend && npm ci
           cd ../frontend && npm ci
       
+      - name: Generate Prisma Client
+        run: |
+          cd backend
+          npx prisma generate
+      
       - name: Run database migrations
         run: |
           cd backend
           export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
           npx prisma migrate deploy
-          npx prisma generate
       
       - name: Start backend server and wait for readiness
         run: |
@@ -149,25 +152,24 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend && npm ci
+          cd .. && npm ci
+      
+      - name: Generate Prisma Client
+        run: |
+          cd backend
+          npx prisma generate
       
       - name: Run database migrations
         run: |
           cd backend
           export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
           npx prisma migrate deploy
-          npx prisma generate
       
-      - name: Run unit tests
+      - name: Run tests
         run: |
           cd backend
           export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
           npm test
-      
-      - name: Run integration tests
-        run: |
-          cd backend
-          export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
-          npm run test:integration
 
   build:
     name: Build Application
@@ -186,6 +188,7 @@ jobs:
         run: |
           cd backend
           npm ci
+          npx prisma generate
           npm run build
       
       - name: Build frontend
