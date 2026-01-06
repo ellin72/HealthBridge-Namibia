@@ -247,7 +247,7 @@ export const getWeightEntries = async (req: AuthRequest, res: Response) => {
 export const getWeightProgress = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { programId } = req.params;
+    const { id: programId } = req.params;
 
     const program = await prisma.weightManagementProgram.findFirst({
       where: {
@@ -275,6 +275,19 @@ export const getWeightProgress = async (req: AuthRequest, res: Response) => {
         100
       : null;
 
+    // Calculate weight loss per week based on actual elapsed time
+    let weightLossPerWeek: number | null = null;
+    if (entries.length > 1) {
+      const oldestEntry = entries[0];
+      const newestEntry = entries[entries.length - 1];
+      const timeDiffMs = newestEntry.recordedAt.getTime() - oldestEntry.recordedAt.getTime();
+      const timeDiffWeeks = timeDiffMs / (1000 * 60 * 60 * 24 * 7); // Convert to weeks
+      if (timeDiffWeeks > 0) {
+        const weightDiff = newestEntry.weight - oldestEntry.weight; // Newest minus oldest (negative = loss)
+        weightLossPerWeek = -weightDiff / timeDiffWeeks; // Negative to show as positive loss
+      }
+    }
+
     const stats = {
       startWeight: program.startWeight,
       currentWeight: program.currentWeight,
@@ -285,9 +298,7 @@ export const getWeightProgress = async (req: AuthRequest, res: Response) => {
       averageWeight: entries.length > 0
         ? entries.reduce((sum, e) => sum + e.weight, 0) / entries.length
         : null,
-      weightLossPerWeek: entries.length > 1
-        ? (entries[0].weight - entries[entries.length - 1].weight) / (entries.length / 7)
-        : null,
+      weightLossPerWeek,
     };
 
     res.json(stats);

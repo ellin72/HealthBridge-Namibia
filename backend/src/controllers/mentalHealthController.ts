@@ -300,9 +300,10 @@ export const updateTherapySession = async (req: AuthRequest, res: Response) => {
     }
 
     // Check if user is the therapist or patient
-    const isTherapist = session.therapistId && await prisma.therapist.findFirst({
+    const therapist = session.therapistId ? await prisma.therapist.findFirst({
       where: { id: session.therapistId, userId },
-    });
+    }) : null;
+    const isTherapist = !!therapist;
 
     const isPatient = session.patientId === userId;
 
@@ -316,7 +317,7 @@ export const updateTherapySession = async (req: AuthRequest, res: Response) => {
     if (diagnosis && isTherapist) updateData.diagnosis = diagnosis ? JSON.stringify(diagnosis) : null;
     if (medicationPrescribed && isTherapist) updateData.medicationPrescribed = medicationPrescribed ? JSON.stringify(medicationPrescribed) : null;
     if (followUpDate) updateData.followUpDate = followUpDate ? new Date(followUpDate) : null;
-    if (status) updateData.status = status as TherapySessionStatus;
+    if (status && isTherapist) updateData.status = status as TherapySessionStatus;
 
     const updated = await prisma.therapySession.update({
       where: { id },

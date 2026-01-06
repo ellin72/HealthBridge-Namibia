@@ -17,9 +17,9 @@ const router = express.Router();
 
 // Therapist routes
 router.get('/therapists', authenticate, getTherapists);
-router.get('/therapists/:id', authenticate, getTherapistById);
 router.post('/therapists/profile', authenticate, createTherapistProfile);
 router.put('/therapists/profile', authenticate, updateTherapistProfile);
+router.get('/therapists/:id', authenticate, getTherapistById);
 
 // Therapy session routes
 router.post('/sessions', authenticate, createTherapySession);
