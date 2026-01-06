@@ -187,6 +187,19 @@ model User {
   subscriptions           Subscription[] @relation("SubscriberSubscriptions")
   subscriptionPayments    SubscriptionPayment[]
   twoFactorAuth           TwoFactorAuth?
+  
+  // New Services Relations
+  therapistProfile        Therapist? @relation("TherapistUser")
+  therapySessionsAsPatient TherapySession[] @relation("PatientTherapySessions")
+  therapistMatches        TherapistMatch[] @relation("PatientTherapistMatches")
+  weightPrograms          WeightManagementProgram[] @relation("PatientWeightPrograms")
+  diabetesPrograms        DiabetesManagementProgram[] @relation("PatientDiabetesPrograms")
+  hypertensionPrograms    HypertensionManagementProgram[] @relation("PatientHypertensionPrograms")
+  specialtyConsultations  SpecialtyConsultation[] @relation("PatientSpecialtyConsultations")
+  sleepPrograms           SleepProgram[] @relation("PatientSleepPrograms")
+  primaryCareRecords      PrimaryCareRecord[] @relation("PatientPrimaryCareRecords")
+  primaryCareRecordsAsProvider PrimaryCareRecord[] @relation("ProviderPrimaryCareRecords")
+  urgentCareRequests      UrgentCareRequest[] @relation("PatientUrgentCareRequests")
 
   @@index([email])
   @@index([role])
@@ -1186,5 +1199,419 @@ model Policy {
   @@index([effectiveDate])
   @@index([expirationDate])
   @@unique([policyType, version])
+}
+
+// ========== NEW SERVICES: TELADOC-STYLE SERVICES ==========
+
+// Mental Health Services
+enum TherapyType {
+  TALK_THERAPY
+  COGNITIVE_BEHAVIORAL_THERAPY
+  GROUP_THERAPY
+  MEDICATION_MANAGEMENT
+  PSYCHIATRIC_CONSULTATION
+}
+
+enum TherapySessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Therapist {
+  id              String            @id @default(uuid())
+  userId          String            @unique
+  specialization  String?           // JSON array of specializations
+  licenseNumber   String?
+  yearsOfExperience Int?
+  bio             String?
+  languages       String?           // JSON array
+  availability    String?           // JSON object with schedule
+  rating          Float?            @default(0)
+  totalSessions   Int               @default(0)
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user            User              @relation("TherapistUser", fields: [userId], references: [id], onDelete: Cascade)
+  sessions       TherapySession[]
+  matches        TherapistMatch[]
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model TherapySession {
+  id              String            @id @default(uuid())
+  patientId       String
+  therapistId     String
+  appointmentId   String?           // Link to appointment if scheduled
+  therapyType     TherapyType
+  sessionDate     DateTime
+  duration        Int               @default(60) // minutes
+  status          TherapySessionStatus @default(SCHEDULED)
+  notes           String?           // Therapist notes
+  patientNotes    String?           // Patient notes/feedback
+  medicationPrescribed String?      // JSON array
+  diagnosis       String?           // JSON object
+  followUpDate    DateTime?
+  videoUrl        String?           // For video sessions
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient         User              @relation("PatientTherapySessions", fields: [patientId], references: [id], onDelete: Cascade)
+  therapist       Therapist        @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([therapistId])
+  @@index([sessionDate])
+  @@index([status])
+}
+
+model TherapistMatch {
+  id              String            @id @default(uuid())
+  patientId       String
+  therapistId     String
+  matchScore      Float?            // AI matching score
+  status          String            @default("PENDING") // PENDING, ACCEPTED, REJECTED, ACTIVE
+  patientPreferences String?         // JSON object
+  matchedAt       DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient         User              @relation("PatientTherapistMatches", fields: [patientId], references: [id], onDelete: Cascade)
+  therapist       Therapist        @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([therapistId])
+  @@index([status])
+  @@unique([patientId, therapistId])
+}
+
+// Weight Management
+enum WeightProgramStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  CANCELLED
+}
+
+model WeightManagementProgram {
+  id              String            @id @default(uuid())
+  patientId       String
+  providerId      String?           // Assigned provider/coach
+  programName     String
+  startWeight     Float
+  targetWeight    Float?
+  currentWeight   Float?
+  startDate       DateTime          @default(now())
+  endDate         DateTime?
+  status          WeightProgramStatus @default(ACTIVE)
+  goals           String?           // JSON array
+  nutritionPlan   String?           // JSON object
+  exercisePlan    String?           // JSON object
+  progressNotes   String?           // JSON array
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient         User              @relation("PatientWeightPrograms", fields: [patientId], references: [id], onDelete: Cascade)
+  entries         WeightEntry[]
+
+  @@index([patientId])
+  @@index([providerId])
+  @@index([status])
+}
+
+model WeightEntry {
+  id              String            @id @default(uuid())
+  programId       String
+  weight          Float
+  bodyFat         Float?
+  muscleMass      Float?
+  measurements    String?           // JSON object (waist, hips, etc.)
+  notes           String?
+  recordedAt      DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+
+  program         WeightManagementProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId])
+  @@index([recordedAt])
+}
+
+// Diabetes Management
+enum DiabetesType {
+  TYPE_1
+  TYPE_2
+  PREDIABETES
+  GESTATIONAL
+}
+
+model DiabetesManagementProgram {
+  id              String            @id @default(uuid())
+  patientId       String
+  providerId      String?
+  diabetesType    DiabetesType
+  diagnosisDate   DateTime?
+  targetGlucoseRange String?         // JSON object {min, max}
+  medications     String?           // JSON array
+  insulinRegimen  String?           // JSON object
+  mealPlan        String?           // JSON object
+  exercisePlan    String?           // JSON object
+  goals           String?           // JSON array
+  status          String            @default("ACTIVE") // ACTIVE, COMPLETED, PAUSED
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient         User              @relation("PatientDiabetesPrograms", fields: [patientId], references: [id], onDelete: Cascade)
+  glucoseReadings GlucoseReading[]
+  medicationLogs  DiabetesMedicationLog[]
+
+  @@index([patientId])
+  @@index([providerId])
+  @@index([status])
+}
+
+model GlucoseReading {
+  id              String            @id @default(uuid())
+  programId       String
+  glucoseLevel    Float
+  readingType     String            // FASTING, POST_PRANDIAL, RANDOM, HBA1C
+  unit            String            @default("mg/dL") // mg/dL or mmol/L
+  mealContext     String?           // BEFORE_MEAL, AFTER_MEAL, etc.
+  medicationTaken Boolean           @default(false)
+  notes           String?
+  recordedAt      DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+
+  program         DiabetesManagementProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId])
+  @@index([recordedAt])
+  @@index([readingType])
+}
+
+model DiabetesMedicationLog {
+  id              String            @id @default(uuid())
+  programId       String
+  medicationName  String
+  dosage          String
+  time            DateTime
+  taken           Boolean           @default(false)
+  notes           String?
+  createdAt       DateTime          @default(now())
+
+  program         DiabetesManagementProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId])
+  @@index([time])
+}
+
+// Hypertension Management
+model HypertensionManagementProgram {
+  id              String            @id @default(uuid())
+  patientId       String
+  providerId      String?
+  diagnosisDate   DateTime?
+  targetBP        String?           // JSON object {systolic, diastolic}
+  medications     String?           // JSON array
+  lifestyleGoals  String?           // JSON array
+  status          String            @default("ACTIVE")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient         User              @relation("PatientHypertensionPrograms", fields: [patientId], references: [id], onDelete: Cascade)
+  bpReadings      BloodPressureReading[]
+  medicationLogs  HypertensionMedicationLog[]
+
+  @@index([patientId])
+  @@index([providerId])
+  @@index([status])
+}
+
+model BloodPressureReading {
+  id              String            @id @default(uuid())
+  programId       String
+  systolic        Int
+  diastolic       Int
+  heartRate       Int?
+  readingContext  String?           // RESTING, AFTER_EXERCISE, STRESS, etc.
+  medicationTaken Boolean           @default(false)
+  notes           String?
+  recordedAt      DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+
+  program         HypertensionManagementProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId])
+  @@index([recordedAt])
+}
+
+model HypertensionMedicationLog {
+  id              String            @id @default(uuid())
+  programId       String
+  medicationName  String
+  dosage          String
+  time            DateTime
+  taken           Boolean           @default(false)
+  notes           String?
+  createdAt       DateTime          @default(now())
+
+  program         HypertensionManagementProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId])
+  @@index([time])
+}
+
+// Specialty & Wellness Services
+enum SpecialtyType {
+  DERMATOLOGY
+  EXPERT_MEDICAL_OPINION
+  SLEEP_MEDICINE
+  NUTRITION
+  OTHER
+}
+
+enum ConsultationStatus {
+  REQUESTED
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model SpecialtyConsultation {
+  id              String            @id @default(uuid())
+  patientId       String
+  providerId      String?           // Specialist provider
+  specialtyType   SpecialtyType
+  appointmentId   String?           // Link to appointment
+  chiefComplaint  String
+  medicalHistory  String?           // JSON object
+  images          String?           // JSON array of image URLs
+  status          ConsultationStatus @default(REQUESTED)
+  diagnosis       String?
+  treatmentPlan   String?           // JSON object
+  prescription    String?           // JSON array
+  followUpDate    DateTime?
+  secondOpinionRequested Boolean    @default(false)
+  expertOpinion   String?           // For expert medical opinions
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient         User              @relation("PatientSpecialtyConsultations", fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([providerId])
+  @@index([specialtyType])
+  @@index([status])
+}
+
+// Sleep Management (BetterSleep)
+model SleepProgram {
+  id              String            @id @default(uuid())
+  patientId       String
+  providerId      String?
+  programName     String
+  targetSleepHours Float            @default(8)
+  bedtime         String?           // HH:mm format
+  wakeTime        String?           // HH:mm format
+  sleepGoals      String?           // JSON array
+  status          String            @default("ACTIVE")
+  startDate       DateTime          @default(now())
+  endDate         DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient         User              @relation("PatientSleepPrograms", fields: [patientId], references: [id], onDelete: Cascade)
+  sleepLogs       SleepLog[]
+
+  @@index([patientId])
+  @@index([providerId])
+  @@index([status])
+}
+
+model SleepLog {
+  id              String            @id @default(uuid())
+  programId       String
+  sleepDate       DateTime          @db.Date
+  bedtime         DateTime?
+  wakeTime        DateTime?
+  sleepDuration   Float?            // hours
+  sleepQuality    Int?              // 1-10 scale
+  awakenings      Int?              // number of times woke up
+  sleepNotes      String?
+  mood            String?            // JSON object
+  activities      String?           // JSON array (exercise, caffeine, etc.)
+  createdAt       DateTime          @default(now())
+
+  program         SleepProgram      @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId])
+  @@index([sleepDate])
+  @@unique([programId, sleepDate])
+}
+
+// Primary Care
+model PrimaryCareRecord {
+  id              String            @id @default(uuid())
+  patientId       String
+  providerId      String
+  appointmentId   String?           // Link to appointment
+  visitType       String            // ROUTINE, PREVENTIVE, ACUTE, CHRONIC, FOLLOW_UP
+  chiefComplaint  String?
+  history         String?           // JSON object
+  physicalExam    String?           // JSON object
+  assessment      String?
+  plan            String?           // JSON object
+  prescriptions   String?           // JSON array
+  referrals       String?           // JSON array
+  labOrders       String?           // JSON array
+  followUpDate    DateTime?
+  preventiveCare  String?           // JSON object (vaccinations, screenings)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient         User              @relation("PatientPrimaryCareRecords", fields: [patientId], references: [id], onDelete: Cascade)
+  provider        User              @relation("ProviderPrimaryCareRecords", fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([providerId])
+  @@index([visitType])
+}
+
+// 24/7 Care (Urgent Care)
+enum UrgencyLevel {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+  EMERGENCY
+}
+
+model UrgentCareRequest {
+  id              String            @id @default(uuid())
+  patientId       String
+  providerId      String?           // Assigned provider
+  appointmentId   String?           // If converted to appointment
+  symptoms        String            // JSON array
+  urgency         UrgencyLevel
+  description     String?
+  triageAssessmentId String?       // Link to triage assessment
+  status          String            @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
+  assignedAt      DateTime?
+  completedAt     DateTime?
+  responseTime    Int?              // minutes
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient         User              @relation("PatientUrgentCareRequests", fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([providerId])
+  @@index([urgency])
+  @@index([status])
+  @@index([createdAt])
 }
 

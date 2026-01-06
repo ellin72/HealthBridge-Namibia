@@ -31,6 +31,13 @@ import adminMonitoringRoutes from './routes/adminMonitoring';
 import surveyRoutes from './routes/surveys';
 import feedbackRoutes from './routes/feedback';
 import policyRoutes from './routes/policies';
+import mentalHealthRoutes from './routes/mentalHealth';
+import weightManagementRoutes from './routes/weightManagement';
+import diabetesManagementRoutes from './routes/diabetesManagement';
+import hypertensionManagementRoutes from './routes/hypertensionManagement';
+import specialtyWellnessRoutes from './routes/specialtyWellness';
+import primaryCareRoutes from './routes/primaryCare';
+import urgentCareRoutes from './routes/urgentCare';
 import { apiMonitoring } from './middleware/apiMonitoring';
 
 // Load environment variables
@@ -121,6 +128,13 @@ app.use('/api/admin', adminMonitoringRoutes);
 app.use('/api/surveys', surveyRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/policies', policyRoutes);
+app.use('/api/mental-health', mentalHealthRoutes);
+app.use('/api/weight-management', weightManagementRoutes);
+app.use('/api/diabetes-management', diabetesManagementRoutes);
+app.use('/api/hypertension-management', hypertensionManagementRoutes);
+app.use('/api/specialty-wellness', specialtyWellnessRoutes);
+app.use('/api/primary-care', primaryCareRoutes);
+app.use('/api/urgent-care', urgentCareRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
