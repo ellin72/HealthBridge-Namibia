@@ -269,11 +269,19 @@ export const getWeightProgress = async (req: AuthRequest, res: Response) => {
 
     const entries = program.entries;
     const totalWeightLoss = program.startWeight - (program.currentWeight || program.startWeight);
-    const targetProgress = program.targetWeight
-      ? ((program.startWeight - (program.currentWeight || program.startWeight)) /
-          (program.startWeight - program.targetWeight)) *
-        100
-      : null;
+    
+    // Calculate target progress, handling division by zero when startWeight equals targetWeight
+    let targetProgress: number | null = null;
+    if (program.targetWeight) {
+      const weightDiff = program.startWeight - program.targetWeight;
+      if (Math.abs(weightDiff) > 0.01) { // Avoid division by zero (using small threshold for floating point)
+        const currentDiff = program.startWeight - (program.currentWeight || program.startWeight);
+        targetProgress = (currentDiff / weightDiff) * 100;
+      } else {
+        // Maintenance goal (startWeight === targetWeight) - can't calculate meaningful progress
+        targetProgress = null;
+      }
+    }
 
     // Calculate weight loss per week based on actual elapsed time
     let weightLossPerWeek: number | null = null;
