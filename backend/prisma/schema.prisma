@@ -193,13 +193,19 @@ model User {
   therapySessionsAsPatient TherapySession[] @relation("PatientTherapySessions")
   therapistMatches        TherapistMatch[] @relation("PatientTherapistMatches")
   weightPrograms          WeightManagementProgram[] @relation("PatientWeightPrograms")
+  weightProgramsAsProvider WeightManagementProgram[] @relation("ProviderWeightPrograms")
   diabetesPrograms        DiabetesManagementProgram[] @relation("PatientDiabetesPrograms")
+  diabetesProgramsAsProvider DiabetesManagementProgram[] @relation("ProviderDiabetesPrograms")
   hypertensionPrograms    HypertensionManagementProgram[] @relation("PatientHypertensionPrograms")
+  hypertensionProgramsAsProvider HypertensionManagementProgram[] @relation("ProviderHypertensionPrograms")
   specialtyConsultations  SpecialtyConsultation[] @relation("PatientSpecialtyConsultations")
+  specialtyConsultationsAsProvider SpecialtyConsultation[] @relation("ProviderSpecialtyConsultations")
   sleepPrograms           SleepProgram[] @relation("PatientSleepPrograms")
+  sleepProgramsAsProvider SleepProgram[] @relation("ProviderSleepPrograms")
   primaryCareRecords      PrimaryCareRecord[] @relation("PatientPrimaryCareRecords")
   primaryCareRecordsAsProvider PrimaryCareRecord[] @relation("ProviderPrimaryCareRecords")
   urgentCareRequests      UrgentCareRequest[] @relation("PatientUrgentCareRequests")
+  urgentCareRequestsAsProvider UrgentCareRequest[] @relation("ProviderUrgentCareRequests")
 
   @@index([email])
   @@index([role])
@@ -1316,6 +1322,7 @@ model WeightManagementProgram {
   updatedAt       DateTime          @updatedAt
 
   patient         User              @relation("PatientWeightPrograms", fields: [patientId], references: [id], onDelete: Cascade)
+  provider        User?             @relation("ProviderWeightPrograms", fields: [providerId], references: [id], onDelete: SetNull)
   entries         WeightEntry[]
 
   @@index([patientId])
@@ -1365,6 +1372,7 @@ model DiabetesManagementProgram {
   updatedAt       DateTime          @updatedAt
 
   patient         User              @relation("PatientDiabetesPrograms", fields: [patientId], references: [id], onDelete: Cascade)
+  provider        User?             @relation("ProviderDiabetesPrograms", fields: [providerId], references: [id], onDelete: SetNull)
   glucoseReadings GlucoseReading[]
   medicationLogs  DiabetesMedicationLog[]
 
@@ -1422,6 +1430,7 @@ model HypertensionManagementProgram {
   updatedAt       DateTime          @updatedAt
 
   patient         User              @relation("PatientHypertensionPrograms", fields: [patientId], references: [id], onDelete: Cascade)
+  provider        User?             @relation("ProviderHypertensionPrograms", fields: [providerId], references: [id], onDelete: SetNull)
   bpReadings      BloodPressureReading[]
   medicationLogs  HypertensionMedicationLog[]
 
@@ -1501,6 +1510,7 @@ model SpecialtyConsultation {
   updatedAt       DateTime          @updatedAt
 
   patient         User              @relation("PatientSpecialtyConsultations", fields: [patientId], references: [id], onDelete: Cascade)
+  provider        User?             @relation("ProviderSpecialtyConsultations", fields: [providerId], references: [id], onDelete: SetNull)
 
   @@index([patientId])
   @@index([providerId])
@@ -1525,6 +1535,7 @@ model SleepProgram {
   updatedAt       DateTime          @updatedAt
 
   patient         User              @relation("PatientSleepPrograms", fields: [patientId], references: [id], onDelete: Cascade)
+  provider        User?             @relation("ProviderSleepPrograms", fields: [providerId], references: [id], onDelete: SetNull)
   sleepLogs       SleepLog[]
 
   @@index([patientId])
@@ -1607,6 +1618,7 @@ model UrgentCareRequest {
   updatedAt       DateTime          @updatedAt
 
   patient         User              @relation("PatientUrgentCareRequests", fields: [patientId], references: [id], onDelete: Cascade)
+  provider        User?             @relation("ProviderUrgentCareRequests", fields: [providerId], references: [id], onDelete: SetNull)
 
   @@index([patientId])
   @@index([providerId])
