@@ -312,12 +312,12 @@ export const updateTherapySession = async (req: AuthRequest, res: Response) => {
     }
 
     const updateData: any = {};
-    if (notes && isTherapist) updateData.notes = notes;
-    if (patientNotes && isPatient) updateData.patientNotes = patientNotes;
-    if (diagnosis && isTherapist) updateData.diagnosis = diagnosis ? JSON.stringify(diagnosis) : null;
-    if (medicationPrescribed && isTherapist) updateData.medicationPrescribed = medicationPrescribed ? JSON.stringify(medicationPrescribed) : null;
-    if (followUpDate && isTherapist) updateData.followUpDate = followUpDate ? new Date(followUpDate) : null;
-    if (status && isTherapist) updateData.status = status as TherapySessionStatus;
+    if (notes !== undefined && isTherapist) updateData.notes = notes;
+    if (patientNotes !== undefined && isPatient) updateData.patientNotes = patientNotes;
+    if (diagnosis !== undefined && isTherapist) updateData.diagnosis = diagnosis ? JSON.stringify(diagnosis) : null;
+    if (medicationPrescribed !== undefined && isTherapist) updateData.medicationPrescribed = medicationPrescribed ? JSON.stringify(medicationPrescribed) : null;
+    if (followUpDate !== undefined && isTherapist) updateData.followUpDate = followUpDate ? new Date(followUpDate) : null;
+    if (status !== undefined && isTherapist) updateData.status = status as TherapySessionStatus;
 
     const updated = await prisma.therapySession.update({
       where: { id },

@@ -136,12 +136,12 @@ export const updateSpecialtyConsultation = async (req: AuthRequest, res: Respons
     }
 
     const updateData: any = {};
-    if (diagnosis && isProvider) updateData.diagnosis = diagnosis ? JSON.stringify(diagnosis) : null;
-    if (treatmentPlan && isProvider) updateData.treatmentPlan = treatmentPlan ? JSON.stringify(treatmentPlan) : null;
-    if (prescription && isProvider) updateData.prescription = prescription ? JSON.stringify(prescription) : null;
-    if (expertOpinion && isProvider) updateData.expertOpinion = expertOpinion;
-    if (followUpDate && isProvider) updateData.followUpDate = followUpDate ? new Date(followUpDate) : null;
-    if (status && isProvider) updateData.status = status as ConsultationStatus;
+    if (diagnosis !== undefined && isProvider) updateData.diagnosis = diagnosis ? JSON.stringify(diagnosis) : null;
+    if (treatmentPlan !== undefined && isProvider) updateData.treatmentPlan = treatmentPlan ? JSON.stringify(treatmentPlan) : null;
+    if (prescription !== undefined && isProvider) updateData.prescription = prescription ? JSON.stringify(prescription) : null;
+    if (expertOpinion !== undefined && isProvider) updateData.expertOpinion = expertOpinion;
+    if (followUpDate !== undefined && isProvider) updateData.followUpDate = followUpDate ? new Date(followUpDate) : null;
+    if (status !== undefined && isProvider) updateData.status = status as ConsultationStatus;
 
     const updated = await prisma.specialtyConsultation.update({
       where: { id },
