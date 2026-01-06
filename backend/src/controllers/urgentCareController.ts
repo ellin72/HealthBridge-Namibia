@@ -133,18 +133,20 @@ export const updateUrgentCareRequest = async (req: AuthRequest, res: Response) =
     const updateData: any = {};
     if (providerId && isProvider) {
       updateData.providerId = providerId;
-      updateData.assignedAt = new Date();
+      const assignedAt = new Date();
+      updateData.assignedAt = assignedAt;
+      // Calculate response time from request creation to assignment
+      if (request.createdAt) {
+        const responseTime = Math.floor(
+          (assignedAt.getTime() - request.createdAt.getTime()) / 60000
+        );
+        updateData.responseTime = responseTime;
+      }
     }
     if (status && isProvider) {
       updateData.status = status;
       if (status === 'COMPLETED') {
         updateData.completedAt = new Date();
-        if (request.assignedAt) {
-          const responseTime = Math.floor(
-            (new Date().getTime() - request.assignedAt.getTime()) / 60000
-          );
-          updateData.responseTime = responseTime;
-        }
       }
     }
     if (appointmentId && isProvider) {

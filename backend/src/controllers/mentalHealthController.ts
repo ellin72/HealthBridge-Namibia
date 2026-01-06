@@ -437,6 +437,7 @@ export const getTherapistMatches = async (req: AuthRequest, res: Response) => {
 // Update match status
 export const updateMatchStatus = async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.user!.id;
     const { id } = req.params;
     const { status } = req.body;
 
@@ -450,6 +451,11 @@ export const updateMatchStatus = async (req: AuthRequest, res: Response) => {
 
     if (!match) {
       return res.status(404).json({ message: 'Match not found' });
+    }
+
+    // Verify user is the patient who owns this match
+    if (match.patientId !== userId) {
+      return res.status(403).json({ message: 'Unauthorized' });
     }
 
     const updated = await prisma.therapistMatch.update({
