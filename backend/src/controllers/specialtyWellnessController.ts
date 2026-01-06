@@ -140,7 +140,7 @@ export const updateSpecialtyConsultation = async (req: AuthRequest, res: Respons
     if (treatmentPlan && isProvider) updateData.treatmentPlan = treatmentPlan ? JSON.stringify(treatmentPlan) : null;
     if (prescription && isProvider) updateData.prescription = prescription ? JSON.stringify(prescription) : null;
     if (expertOpinion && isProvider) updateData.expertOpinion = expertOpinion;
-    if (followUpDate) updateData.followUpDate = followUpDate ? new Date(followUpDate) : null;
+    if (followUpDate && isProvider) updateData.followUpDate = followUpDate ? new Date(followUpDate) : null;
     if (status && isProvider) updateData.status = status as ConsultationStatus;
 
     const updated = await prisma.specialtyConsultation.update({

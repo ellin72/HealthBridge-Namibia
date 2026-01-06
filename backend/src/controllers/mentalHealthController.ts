@@ -316,7 +316,7 @@ export const updateTherapySession = async (req: AuthRequest, res: Response) => {
     if (patientNotes && isPatient) updateData.patientNotes = patientNotes;
     if (diagnosis && isTherapist) updateData.diagnosis = diagnosis ? JSON.stringify(diagnosis) : null;
     if (medicationPrescribed && isTherapist) updateData.medicationPrescribed = medicationPrescribed ? JSON.stringify(medicationPrescribed) : null;
-    if (followUpDate) updateData.followUpDate = followUpDate ? new Date(followUpDate) : null;
+    if (followUpDate && isTherapist) updateData.followUpDate = followUpDate ? new Date(followUpDate) : null;
     if (status && isTherapist) updateData.status = status as TherapySessionStatus;
 
     const updated = await prisma.therapySession.update({
