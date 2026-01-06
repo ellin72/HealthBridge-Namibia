@@ -891,6 +891,482 @@ async function testClinicalTemplatesRoutes() {
   });
 }
 
+// ==================== MENTAL HEALTH ROUTES ====================
+async function testMentalHealthRoutes() {
+  console.log('\n📋 Testing Mental Health Routes\n'.cyan);
+
+  let therapistId = null;
+  let sessionId = null;
+  let matchId = null;
+
+  await runTest('GET /api/mental-health/therapists', async () => {
+    const result = await makeRequest('GET', '/mental-health/therapists', null, tokens.patient, 200);
+    return result.success;
+  });
+
+  await runTest('POST /api/mental-health/therapists/profile - Provider creates therapist profile', async () => {
+    const result = await makeRequest('POST', '/mental-health/therapists/profile', {
+      specialization: 'Cognitive Behavioral Therapy',
+      licenseNumber: 'TEST-LICENSE-123',
+      yearsOfExperience: 5,
+      bio: 'Test therapist bio',
+      languages: 'English, Afrikaans',
+      availability: 'Weekdays 9-5'
+    }, tokens.provider, 201);
+    if (result.success && result.data) {
+      therapistId = result.data.id;
+    }
+    return result.success;
+  });
+
+  await runTest('GET /api/mental-health/therapists/:id', async () => {
+    if (!therapistId) {
+      // Try to get any therapist
+      const therapistsResult = await makeRequest('GET', '/mental-health/therapists', null, tokens.patient, 200);
+      if (therapistsResult.success && therapistsResult.data && therapistsResult.data.length > 0) {
+        therapistId = therapistsResult.data[0].id;
+      }
+    }
+    if (therapistId) {
+      const result = await makeRequest('GET', `/mental-health/therapists/${therapistId}`, null, tokens.patient, 200);
+      return result.success;
+    }
+    return false;
+  });
+
+  await runTest('POST /api/mental-health/sessions', async () => {
+    if (!therapistId) {
+      const therapistsResult = await makeRequest('GET', '/mental-health/therapists', null, tokens.patient, 200);
+      if (therapistsResult.success && therapistsResult.data && therapistsResult.data.length > 0) {
+        therapistId = therapistsResult.data[0].id;
+      }
+    }
+    if (therapistId) {
+      const result = await makeRequest('POST', '/mental-health/sessions', {
+        therapistId: therapistId,
+        therapyType: 'TALK_THERAPY',
+        sessionDate: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+        duration: 60
+      }, tokens.patient, 201);
+      if (result.success && result.data) {
+        sessionId = result.data.id;
+      }
+      return result.success;
+    }
+    return false;
+  });
+
+  await runTest('GET /api/mental-health/sessions', async () => {
+    const result = await makeRequest('GET', '/mental-health/sessions', null, tokens.patient, 200);
+    return result.success;
+  });
+
+  if (sessionId) {
+    await runTest('PUT /api/mental-health/sessions/:id', async () => {
+      const result = await makeRequest('PUT', `/mental-health/sessions/${sessionId}`, {
+        notes: 'Test session notes'
+      }, tokens.patient, 200);
+      return result.success;
+    });
+  }
+
+  await runTest('POST /api/mental-health/matches', async () => {
+    if (!therapistId) {
+      const therapistsResult = await makeRequest('GET', '/mental-health/therapists', null, tokens.patient, 200);
+      if (therapistsResult.success && therapistsResult.data && therapistsResult.data.length > 0) {
+        therapistId = therapistsResult.data[0].id;
+      }
+    }
+    if (therapistId) {
+      const result = await makeRequest('POST', '/mental-health/matches', {
+        therapistId: therapistId,
+        patientPreferences: JSON.stringify({ language: 'English' })
+      }, tokens.patient, 201);
+      if (result.success && result.data) {
+        matchId = result.data.id;
+      }
+      return result.success;
+    }
+    return false;
+  });
+
+  await runTest('GET /api/mental-health/matches', async () => {
+    const result = await makeRequest('GET', '/mental-health/matches', null, tokens.patient, 200);
+    return result.success;
+  });
+
+  if (matchId) {
+    await runTest('PUT /api/mental-health/matches/:id', async () => {
+      const result = await makeRequest('PUT', `/mental-health/matches/${matchId}`, {
+        status: 'ACCEPTED'
+      }, tokens.patient, 200);
+      return result.success;
+    });
+  }
+}
+
+// ==================== WEIGHT MANAGEMENT ROUTES ====================
+async function testWeightManagementRoutes() {
+  console.log('\n📋 Testing Weight Management Routes\n'.cyan);
+
+  let programId = null;
+  let entryId = null;
+
+  await runTest('POST /api/weight-management/programs', async () => {
+    const result = await makeRequest('POST', '/weight-management/programs', {
+      programName: 'Test Weight Program',
+      startWeight: 80,
+      targetWeight: 70,
+      providerId: testUsers.provider?.id
+    }, tokens.patient, 201);
+    if (result.success && result.data) {
+      programId = result.data.id;
+    }
+    return result.success;
+  });
+
+  await runTest('GET /api/weight-management/programs', async () => {
+    const result = await makeRequest('GET', '/weight-management/programs', null, tokens.patient, 200);
+    return result.success;
+  });
+
+  if (programId) {
+    await runTest('GET /api/weight-management/programs/:id', async () => {
+      const result = await makeRequest('GET', `/weight-management/programs/${programId}`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('PUT /api/weight-management/programs/:id', async () => {
+      const result = await makeRequest('PUT', `/weight-management/programs/${programId}`, {
+        targetWeight: 65
+      }, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('GET /api/weight-management/programs/:id/progress', async () => {
+      const result = await makeRequest('GET', `/weight-management/programs/${programId}/progress`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('POST /api/weight-management/entries', async () => {
+      const result = await makeRequest('POST', '/weight-management/entries', {
+        programId: programId,
+        weight: 78,
+        notes: 'Test weight entry'
+      }, tokens.patient, 201);
+      if (result.success && result.data) {
+        entryId = result.data.id;
+      }
+      return result.success;
+    });
+
+    await runTest('GET /api/weight-management/entries', async () => {
+      const result = await makeRequest('GET', `/weight-management/entries?programId=${programId}`, null, tokens.patient, 200);
+      return result.success;
+    });
+  }
+}
+
+// ==================== DIABETES MANAGEMENT ROUTES ====================
+async function testDiabetesManagementRoutes() {
+  console.log('\n📋 Testing Diabetes Management Routes\n'.cyan);
+
+  let programId = null;
+
+  await runTest('POST /api/diabetes-management/programs', async () => {
+    const result = await makeRequest('POST', '/diabetes-management/programs', {
+      diabetesType: 'TYPE_2',
+      targetGlucoseRange: '80-120',
+      providerId: testUsers.provider?.id
+    }, tokens.patient, 201);
+    if (result.success && result.data) {
+      programId = result.data.id;
+    }
+    return result.success;
+  });
+
+  await runTest('GET /api/diabetes-management/programs', async () => {
+    const result = await makeRequest('GET', '/diabetes-management/programs', null, tokens.patient, 200);
+    return result.success;
+  });
+
+  if (programId) {
+    await runTest('GET /api/diabetes-management/programs/:id', async () => {
+      const result = await makeRequest('GET', `/diabetes-management/programs/${programId}`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('GET /api/diabetes-management/programs/:id/statistics', async () => {
+      const result = await makeRequest('GET', `/diabetes-management/programs/${programId}/statistics`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('POST /api/diabetes-management/glucose-readings', async () => {
+      const result = await makeRequest('POST', '/diabetes-management/glucose-readings', {
+        programId: programId,
+        glucoseLevel: 100,
+        readingType: 'FASTING',
+        unit: 'mg/dL'
+      }, tokens.patient, 201);
+      return result.success;
+    });
+
+    await runTest('GET /api/diabetes-management/glucose-readings', async () => {
+      const result = await makeRequest('GET', `/diabetes-management/glucose-readings?programId=${programId}`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('POST /api/diabetes-management/medication-logs', async () => {
+      const result = await makeRequest('POST', '/diabetes-management/medication-logs', {
+        programId: programId,
+        medicationName: 'Metformin',
+        dosage: '500mg',
+        time: new Date().toISOString(),
+        taken: true
+      }, tokens.patient, 201);
+      return result.success;
+    });
+  }
+}
+
+// ==================== HYPERTENSION MANAGEMENT ROUTES ====================
+async function testHypertensionManagementRoutes() {
+  console.log('\n📋 Testing Hypertension Management Routes\n'.cyan);
+
+  let programId = null;
+
+  await runTest('POST /api/hypertension-management/programs', async () => {
+    const result = await makeRequest('POST', '/hypertension-management/programs', {
+      targetBP: JSON.stringify({ systolic: 120, diastolic: 80 }),
+      providerId: testUsers.provider?.id
+    }, tokens.patient, 201);
+    if (result.success && result.data) {
+      programId = result.data.id;
+    }
+    return result.success;
+  });
+
+  await runTest('GET /api/hypertension-management/programs', async () => {
+    const result = await makeRequest('GET', '/hypertension-management/programs', null, tokens.patient, 200);
+    return result.success;
+  });
+
+  if (programId) {
+    await runTest('GET /api/hypertension-management/programs/:id', async () => {
+      const result = await makeRequest('GET', `/hypertension-management/programs/${programId}`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('GET /api/hypertension-management/programs/:id/statistics', async () => {
+      const result = await makeRequest('GET', `/hypertension-management/programs/${programId}/statistics`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('POST /api/hypertension-management/bp-readings', async () => {
+      const result = await makeRequest('POST', '/hypertension-management/bp-readings', {
+        programId: programId,
+        systolic: 120,
+        diastolic: 80,
+        heartRate: 72
+      }, tokens.patient, 201);
+      return result.success;
+    });
+
+    await runTest('GET /api/hypertension-management/bp-readings', async () => {
+      const result = await makeRequest('GET', `/hypertension-management/bp-readings?programId=${programId}`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('POST /api/hypertension-management/medication-logs', async () => {
+      const result = await makeRequest('POST', '/hypertension-management/medication-logs', {
+        programId: programId,
+        medicationName: 'Lisinopril',
+        dosage: '10mg',
+        time: new Date().toISOString(),
+        taken: true
+      }, tokens.patient, 201);
+      return result.success;
+    });
+  }
+}
+
+// ==================== SPECIALTY WELLNESS ROUTES ====================
+async function testSpecialtyWellnessRoutes() {
+  console.log('\n📋 Testing Specialty Wellness Routes\n'.cyan);
+
+  let consultationId = null;
+  let sleepProgramId = null;
+
+  await runTest('POST /api/specialty-wellness/consultations', async () => {
+    const result = await makeRequest('POST', '/specialty-wellness/consultations', {
+      specialtyType: 'DERMATOLOGY',
+      chiefComplaint: 'Test skin condition',
+      providerId: testUsers.provider?.id
+    }, tokens.patient, 201);
+    if (result.success && result.data) {
+      consultationId = result.data.id;
+    }
+    return result.success;
+  });
+
+  await runTest('GET /api/specialty-wellness/consultations', async () => {
+    const result = await makeRequest('GET', '/specialty-wellness/consultations', null, tokens.patient, 200);
+    return result.success;
+  });
+
+  if (consultationId) {
+    await runTest('GET /api/specialty-wellness/consultations/:id', async () => {
+      const result = await makeRequest('GET', `/specialty-wellness/consultations/${consultationId}`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('PUT /api/specialty-wellness/consultations/:id - Provider update', async () => {
+      const result = await makeRequest('PUT', `/specialty-wellness/consultations/${consultationId}`, {
+        diagnosis: 'Test diagnosis',
+        status: 'COMPLETED'
+      }, tokens.provider, 200);
+      return result.success;
+    });
+  }
+
+  await runTest('POST /api/specialty-wellness/sleep/programs', async () => {
+    const result = await makeRequest('POST', '/specialty-wellness/sleep/programs', {
+      programName: 'Test Sleep Program',
+      targetSleepHours: 8,
+      providerId: testUsers.provider?.id
+    }, tokens.patient, 201);
+    if (result.success && result.data) {
+      sleepProgramId = result.data.id;
+    }
+    return result.success;
+  });
+
+  await runTest('GET /api/specialty-wellness/sleep/programs', async () => {
+    const result = await makeRequest('GET', '/specialty-wellness/sleep/programs', null, tokens.patient, 200);
+    return result.success;
+  });
+
+  if (sleepProgramId) {
+    await runTest('GET /api/specialty-wellness/sleep/programs/:id', async () => {
+      const result = await makeRequest('GET', `/specialty-wellness/sleep/programs/${sleepProgramId}`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('GET /api/specialty-wellness/sleep/programs/:id/statistics', async () => {
+      const result = await makeRequest('GET', `/specialty-wellness/sleep/programs/${sleepProgramId}/statistics`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('POST /api/specialty-wellness/sleep/logs', async () => {
+      const result = await makeRequest('POST', '/specialty-wellness/sleep/logs', {
+        programId: sleepProgramId,
+        sleepDate: new Date().toISOString().split('T')[0], // Today's date
+        sleepDuration: 7.5,
+        sleepQuality: 4
+      }, tokens.patient, 201);
+      return result.success;
+    });
+
+    await runTest('GET /api/specialty-wellness/sleep/logs', async () => {
+      const result = await makeRequest('GET', `/specialty-wellness/sleep/logs?programId=${sleepProgramId}`, null, tokens.patient, 200);
+      return result.success;
+    });
+  }
+}
+
+// ==================== PRIMARY CARE ROUTES ====================
+async function testPrimaryCareRoutes() {
+  console.log('\n📋 Testing Primary Care Routes\n'.cyan);
+
+  let recordId = null;
+
+  await runTest('POST /api/primary-care/records', async () => {
+    const result = await makeRequest('POST', '/primary-care/records', {
+      providerId: testUsers.provider?.id,
+      visitType: 'ROUTINE',
+      chiefComplaint: 'Test complaint'
+    }, tokens.patient, 201);
+    if (result.success && result.data) {
+      recordId = result.data.id;
+    }
+    return result.success;
+  });
+
+  await runTest('GET /api/primary-care/records', async () => {
+    const result = await makeRequest('GET', '/primary-care/records', null, tokens.patient, 200);
+    return result.success;
+  });
+
+  if (recordId) {
+    await runTest('GET /api/primary-care/records/:id', async () => {
+      const result = await makeRequest('GET', `/primary-care/records/${recordId}`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('PUT /api/primary-care/records/:id - Provider only', async () => {
+      const result = await makeRequest('PUT', `/primary-care/records/${recordId}`, {
+        assessment: 'Test assessment',
+        plan: JSON.stringify({ followUp: 'In 2 weeks' })
+      }, tokens.provider, 200);
+      return result.success;
+    });
+  }
+
+  await runTest('GET /api/primary-care/summary', async () => {
+    const result = await makeRequest('GET', '/primary-care/summary', null, tokens.patient, 200);
+    return result.success;
+  });
+}
+
+// ==================== URGENT CARE ROUTES ====================
+async function testUrgentCareRoutes() {
+  console.log('\n📋 Testing Urgent Care Routes\n'.cyan);
+
+  let requestId = null;
+
+  await runTest('POST /api/urgent-care/requests', async () => {
+    const result = await makeRequest('POST', '/urgent-care/requests', {
+      symptoms: JSON.stringify(['fever', 'cough']),
+      urgency: 'HIGH',
+      description: 'Test urgent care request'
+    }, tokens.patient, 201);
+    if (result.success && result.data) {
+      requestId = result.data.id;
+    }
+    return result.success;
+  });
+
+  await runTest('GET /api/urgent-care/requests', async () => {
+    const result = await makeRequest('GET', '/urgent-care/requests', null, tokens.patient, 200);
+    return result.success;
+  });
+
+  await runTest('GET /api/urgent-care/requests/all - Provider/Admin only', async () => {
+    const result = await makeRequest('GET', '/urgent-care/requests/all', null, tokens.provider, 200);
+    return result.success;
+  });
+
+  if (requestId) {
+    await runTest('GET /api/urgent-care/requests/:id', async () => {
+      const result = await makeRequest('GET', `/urgent-care/requests/${requestId}`, null, tokens.patient, 200);
+      return result.success;
+    });
+
+    await runTest('PUT /api/urgent-care/requests/:id - Provider update', async () => {
+      const result = await makeRequest('PUT', `/urgent-care/requests/${requestId}`, {
+        providerId: testUsers.provider?.id,
+        status: 'ASSIGNED'
+      }, tokens.provider, 200);
+      return result.success;
+    });
+  }
+
+  await runTest('GET /api/urgent-care/statistics - Admin only', async () => {
+    const result = await makeRequest('GET', '/urgent-care/statistics', null, tokens.admin, 200);
+    return result.success;
+  });
+}
+
 // ==================== ROLE-BASED ACCESS CONTROL TESTS ====================
 async function testRoleBasedAccess() {
   console.log('\n📋 Testing Role-Based Access Control\n'.cyan);
@@ -1044,6 +1520,13 @@ async function runAllTests() {
     await testOfflineSyncRoutes();
     await testTelehealthProRoutes();
     await testClinicalTemplatesRoutes();
+    await testMentalHealthRoutes();
+    await testWeightManagementRoutes();
+    await testDiabetesManagementRoutes();
+    await testHypertensionManagementRoutes();
+    await testSpecialtyWellnessRoutes();
+    await testPrimaryCareRoutes();
+    await testUrgentCareRoutes();
     await testRoleBasedAccess();
 
     // Print summary

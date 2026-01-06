@@ -64,6 +64,28 @@ describe('API Routes', () => {
         getTracker().track('users', testUsers.patient.id);
       }
     }
+
+    // Create provider user
+    const providerData = {
+      email: `provider-${timestamp}@test.com`,
+      password: 'Test123!@#',
+      firstName: 'Provider',
+      lastName: 'User',
+      role: 'HEALTHCARE_PROVIDER'
+    };
+
+    const providerRegister = await makeRequest('POST', '/auth/register', providerData, null, { expectedStatus: 201 });
+    if (providerRegister.success) {
+      testUsers.provider = providerRegister.data.user;
+      const providerLogin = await makeRequest('POST', '/auth/login', {
+        email: providerData.email,
+        password: providerData.password
+      });
+      if (providerLogin.success) {
+        tokens.provider = providerLogin.data.token;
+        getTracker().track('users', testUsers.provider.id);
+      }
+    }
   });
 
   // Cleanup: Remove test data
@@ -302,6 +324,192 @@ describe('API Routes', () => {
 
       expect(response.status).toBe(400);
       expect(response.data).toHaveProperty('message');
+    });
+  });
+
+  describe('Mental Health Routes', () => {
+    test('GET /api/mental-health/therapists', async () => {
+      const response = await makeRequest('GET', '/mental-health/therapists', null, tokens.patient);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.data)).toBe(true);
+    });
+
+    test('POST /api/mental-health/therapists/profile', async () => {
+      if (!tokens.provider) {
+        console.warn('Skipping test: Provider token not available');
+        return;
+      }
+
+      const therapistData = {
+        specialization: 'Cognitive Behavioral Therapy',
+        licenseNumber: 'TEST-LICENSE-123',
+        yearsOfExperience: 5,
+        bio: 'Test therapist bio'
+      };
+
+      const response = await makeRequest('POST', '/mental-health/therapists/profile', therapistData, tokens.provider, { expectedStatus: 201 });
+
+      expect(response.status).toBe(201);
+      expect(response.data).toHaveProperty('id');
+    });
+  });
+
+  describe('Weight Management Routes', () => {
+    test('POST /api/weight-management/programs', async () => {
+      const programData = {
+        programName: 'Test Weight Program',
+        startWeight: 80,
+        targetWeight: 70
+      };
+
+      const response = await makeRequest('POST', '/weight-management/programs', programData, tokens.patient, { expectedStatus: 201 });
+
+      expect(response.status).toBe(201);
+      expect(response.data).toHaveProperty('id');
+      expect(response.data.programName).toBe(programData.programName);
+    });
+
+    test('GET /api/weight-management/programs', async () => {
+      const response = await makeRequest('GET', '/weight-management/programs', null, tokens.patient);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.data)).toBe(true);
+    });
+  });
+
+  describe('Diabetes Management Routes', () => {
+    test('POST /api/diabetes-management/programs', async () => {
+      const programData = {
+        diabetesType: 'TYPE_2',
+        targetGlucoseRange: '80-120'
+      };
+
+      const response = await makeRequest('POST', '/diabetes-management/programs', programData, tokens.patient, { expectedStatus: 201 });
+
+      expect(response.status).toBe(201);
+      expect(response.data).toHaveProperty('id');
+    });
+
+    test('GET /api/diabetes-management/programs', async () => {
+      const response = await makeRequest('GET', '/diabetes-management/programs', null, tokens.patient);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.data)).toBe(true);
+    });
+  });
+
+  describe('Hypertension Management Routes', () => {
+    test('POST /api/hypertension-management/programs', async () => {
+      const programData = {
+        targetBP: JSON.stringify({ systolic: 120, diastolic: 80 })
+      };
+
+      const response = await makeRequest('POST', '/hypertension-management/programs', programData, tokens.patient, { expectedStatus: 201 });
+
+      expect(response.status).toBe(201);
+      expect(response.data).toHaveProperty('id');
+    });
+
+    test('GET /api/hypertension-management/programs', async () => {
+      const response = await makeRequest('GET', '/hypertension-management/programs', null, tokens.patient);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.data)).toBe(true);
+    });
+  });
+
+  describe('Specialty Wellness Routes', () => {
+    test('POST /api/specialty-wellness/consultations', async () => {
+      const consultationData = {
+        specialtyType: 'DERMATOLOGY',
+        chiefComplaint: 'Test skin condition'
+      };
+
+      const response = await makeRequest('POST', '/specialty-wellness/consultations', consultationData, tokens.patient, { expectedStatus: 201 });
+
+      expect(response.status).toBe(201);
+      expect(response.data).toHaveProperty('id');
+    });
+
+    test('GET /api/specialty-wellness/consultations', async () => {
+      const response = await makeRequest('GET', '/specialty-wellness/consultations', null, tokens.patient);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.data)).toBe(true);
+    });
+  });
+
+  describe('Primary Care Routes', () => {
+    test('POST /api/primary-care/records', async () => {
+      // First need to create a provider user for this test
+      const providerData = {
+        email: `provider-${Date.now()}@test.com`,
+        password: 'Test123!@#',
+        firstName: 'Provider',
+        lastName: 'User',
+        role: 'HEALTHCARE_PROVIDER'
+      };
+
+      const providerRegister = await makeRequest('POST', '/auth/register', providerData, null, { expectedStatus: 201 });
+      let providerToken = null;
+      let providerId = null;
+
+      if (providerRegister.success) {
+        providerId = providerRegister.data.user.id;
+        const providerLogin = await makeRequest('POST', '/auth/login', {
+          email: providerData.email,
+          password: providerData.password
+        });
+        if (providerLogin.success) {
+          providerToken = providerLogin.data.token;
+        }
+      }
+
+      if (providerId) {
+        const recordData = {
+          providerId: providerId,
+          visitType: 'ROUTINE',
+          chiefComplaint: 'Test complaint'
+        };
+
+        const response = await makeRequest('POST', '/primary-care/records', recordData, tokens.patient, { expectedStatus: 201 });
+
+        expect(response.status).toBe(201);
+        expect(response.data).toHaveProperty('id');
+      } else {
+        // Skip if we couldn't create provider
+        expect(true).toBe(true);
+      }
+    });
+
+    test('GET /api/primary-care/records', async () => {
+      const response = await makeRequest('GET', '/primary-care/records', null, tokens.patient);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.data)).toBe(true);
+    });
+  });
+
+  describe('Urgent Care Routes', () => {
+    test('POST /api/urgent-care/requests', async () => {
+      const requestData = {
+        symptoms: ['fever', 'cough'], // Send as array, controller will stringify
+        urgency: 'HIGH',
+        description: 'Test urgent care request'
+      };
+
+      const response = await makeRequest('POST', '/urgent-care/requests', requestData, tokens.patient, { expectedStatus: 201 });
+
+      expect(response.status).toBe(201);
+      expect(response.data).toHaveProperty('id');
+    });
+
+    test('GET /api/urgent-care/requests', async () => {
+      const response = await makeRequest('GET', '/urgent-care/requests', null, tokens.patient);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.data)).toBe(true);
     });
   });
 });

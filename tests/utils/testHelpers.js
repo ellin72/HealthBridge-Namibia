@@ -50,13 +50,17 @@ async function makeRequest(method, url, data = null, token = null, options = {})
       throw new Error(`Connection refused. Is the API server running at ${API_URL}?`);
     }
     
+    const status = error.response?.status || 500;
+    const isExpected = Array.isArray(expectedStatusArray)
+      ? expectedStatusArray.includes(status)
+      : status === expectedStatus;
+    
     return {
-      success: false,
-      status: error.response?.status || 500,
+      success: isExpected,
+      status: status,
       data: error.response?.data || null,
       headers: error.response?.headers || {},
-      error: error.message,
-      isExpected: error.response?.status === expectedStatus
+      error: error.message
     };
   }
 }
