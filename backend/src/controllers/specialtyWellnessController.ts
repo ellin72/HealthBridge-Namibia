@@ -136,7 +136,7 @@ export const updateSpecialtyConsultation = async (req: AuthRequest, res: Respons
     }
 
     const updateData: any = {};
-    if (diagnosis && isProvider) updateData.diagnosis = diagnosis;
+    if (diagnosis && isProvider) updateData.diagnosis = diagnosis ? JSON.stringify(diagnosis) : null;
     if (treatmentPlan && isProvider) updateData.treatmentPlan = treatmentPlan ? JSON.stringify(treatmentPlan) : null;
     if (prescription && isProvider) updateData.prescription = prescription ? JSON.stringify(prescription) : null;
     if (expertOpinion && isProvider) updateData.expertOpinion = expertOpinion;

@@ -321,6 +321,27 @@ export const getBloodPressureStatistics = async (req: AuthRequest, res: Response
 
     const targetBP = program.targetBP ? JSON.parse(program.targetBP) : null;
 
+    // Calculate in-range count based on targetBP structure {systolic, diastolic}
+    // Readings are considered "in range" if within ±10 mmHg of target values
+    let inRangeCount: number | null = null;
+    if (targetBP && targetBP.systolic !== undefined && targetBP.diastolic !== undefined) {
+      const tolerance = 10; // ±10 mmHg tolerance
+      inRangeCount = readings.filter(
+        (r) =>
+          Math.abs(r.systolic - targetBP.systolic) <= tolerance &&
+          Math.abs(r.diastolic - targetBP.diastolic) <= tolerance
+      ).length;
+    } else if (targetBP && (targetBP.systolicMin !== undefined || targetBP.systolicMax !== undefined)) {
+      // Support legacy range structure for backward compatibility
+      inRangeCount = readings.filter(
+        (r) =>
+          (!targetBP.systolicMin || r.systolic >= targetBP.systolicMin) &&
+          (!targetBP.systolicMax || r.systolic <= targetBP.systolicMax) &&
+          (!targetBP.diastolicMin || r.diastolic >= targetBP.diastolicMin) &&
+          (!targetBP.diastolicMax || r.diastolic <= targetBP.diastolicMax)
+      ).length;
+    }
+
     const stats = {
       totalReadings: readings.length,
       averageSystolic: readings.length > 0
@@ -347,15 +368,7 @@ export const getBloodPressureStatistics = async (req: AuthRequest, res: Response
       maxDiastolic: readings.length > 0
         ? Math.max(...readings.map((r) => r.diastolic))
         : null,
-      inRangeCount: targetBP
-        ? readings.filter(
-            (r) =>
-              r.systolic >= targetBP.systolicMin &&
-              r.systolic <= targetBP.systolicMax &&
-              r.diastolic >= targetBP.diastolicMin &&
-              r.diastolic <= targetBP.diastolicMax
-          ).length
-        : null,
+      inRangeCount,
       targetBP,
     };
 
