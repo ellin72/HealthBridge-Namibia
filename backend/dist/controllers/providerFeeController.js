@@ -1,0 +1,158 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getAllProviderFees = exports.updateProviderFee = exports.getProviderFee = void 0;
+const prisma_1 = require("../utils/prisma");
+// Get provider fee settings
+const getProviderFee = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        // Only providers can view their own fees, or admins can view any provider's fees
+        const providerId = req.query.providerId || (userRole === 'HEALTHCARE_PROVIDER' ? userId : null);
+        if (!providerId) {
+            return res.status(400).json({ message: 'Provider ID is required' });
+        }
+        // Check permissions
+        if (userRole !== 'ADMIN' && userId !== providerId) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+        let providerFee = await prisma_1.prisma.providerFee.findUnique({
+            where: { providerId },
+            include: {
+                provider: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        // Create default fee if doesn't exist
+        if (!providerFee) {
+            providerFee = await prisma_1.prisma.providerFee.create({
+                data: {
+                    providerId,
+                    consultationFee: 500, // Default NAD 500
+                    currency: 'NAD',
+                    isActive: true
+                },
+                include: {
+                    provider: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true
+                        }
+                    }
+                }
+            });
+        }
+        res.json({
+            ...providerFee,
+            serviceFees: providerFee.serviceFees ? JSON.parse(providerFee.serviceFees) : null
+        });
+    }
+    catch (error) {
+        console.error('Get provider fee error:', error);
+        res.status(500).json({ message: 'Failed to fetch provider fee', error: error.message });
+    }
+};
+exports.getProviderFee = getProviderFee;
+// Update provider fee settings
+const updateProviderFee = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        const { consultationFee, serviceFees, currency, isActive } = req.body;
+        const providerId = req.params.providerId || userId;
+        // Only providers can update their own fees, or admins can update any
+        if (userRole !== 'ADMIN' && userId !== providerId) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+        // Verify provider exists and is a healthcare provider
+        const provider = await prisma_1.prisma.user.findUnique({
+            where: { id: providerId }
+        });
+        if (!provider || provider.role !== 'HEALTHCARE_PROVIDER') {
+            return res.status(400).json({ message: 'Invalid provider' });
+        }
+        const updateData = {};
+        if (consultationFee !== undefined)
+            updateData.consultationFee = consultationFee;
+        if (serviceFees !== undefined)
+            updateData.serviceFees = JSON.stringify(serviceFees);
+        if (currency !== undefined)
+            updateData.currency = currency;
+        if (isActive !== undefined)
+            updateData.isActive = isActive;
+        const providerFee = await prisma_1.prisma.providerFee.upsert({
+            where: { providerId },
+            create: {
+                providerId,
+                consultationFee: consultationFee || 500,
+                serviceFees: serviceFees ? JSON.stringify(serviceFees) : null,
+                currency: currency || 'NAD',
+                isActive: isActive !== undefined ? isActive : true
+            },
+            update: updateData,
+            include: {
+                provider: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        res.json({
+            message: 'Provider fee updated successfully',
+            providerFee: {
+                ...providerFee,
+                serviceFees: providerFee.serviceFees ? JSON.parse(providerFee.serviceFees) : null
+            }
+        });
+    }
+    catch (error) {
+        console.error('Update provider fee error:', error);
+        res.status(500).json({ message: 'Failed to update provider fee', error: error.message });
+    }
+};
+exports.updateProviderFee = updateProviderFee;
+// Get all provider fees (admin only)
+const getAllProviderFees = async (req, res) => {
+    try {
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+        const providerFees = await prisma_1.prisma.providerFee.findMany({
+            include: {
+                provider: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
+            },
+            orderBy: { updatedAt: 'desc' }
+        });
+        res.json({
+            providerFees: providerFees.map(fee => ({
+                ...fee,
+                serviceFees: fee.serviceFees ? JSON.parse(fee.serviceFees) : null
+            }))
+        });
+    }
+    catch (error) {
+        console.error('Get all provider fees error:', error);
+        res.status(500).json({ message: 'Failed to fetch provider fees', error: error.message });
+    }
+};
+exports.getAllProviderFees = getAllProviderFees;
+//# sourceMappingURL=providerFeeController.js.map

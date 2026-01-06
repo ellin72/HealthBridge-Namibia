@@ -83,6 +83,7 @@ async function processPendingCallback(
           tax: payment.invoice.tax,
           discount: payment.invoice.discount,
           total: payment.invoice.total,
+          paidDate: updatedPayment.completedAt || new Date(),
           pdfUrl: receipt.pdfUrl
         });
 
@@ -91,11 +92,18 @@ async function processPendingCallback(
             invoiceNumber: payment.invoice.invoiceNumber,
             receiptNumber: receipt.receiptNumber,
             patientName: `${payment.invoice.patient.firstName} ${payment.invoice.patient.lastName}`,
+            patientEmail: payment.invoice.patient.email,
             patientPhone: payment.invoice.patient.phone,
             amount: updatedPayment.amount,
             currency: updatedPayment.currency,
             paymentMethod: updatedPayment.method,
-            transactionId: updatedPayment.transactionId || undefined
+            transactionId: updatedPayment.transactionId || undefined,
+            items: JSON.parse(payment.invoice.items),
+            subtotal: payment.invoice.subtotal,
+            tax: payment.invoice.tax,
+            discount: payment.invoice.discount,
+            total: payment.invoice.total,
+            paidDate: updatedPayment.completedAt || new Date()
           });
         }
       }

@@ -165,10 +165,6 @@ export const getAllProviderEarnings = async (req: AuthRequest, res: Response) =>
 
     const earnings = await prisma.providerEarnings.findMany({
       where,
-      include: {
-        // Note: ProviderEarnings doesn't have a relation to User in schema
-        // We would need to add that or fetch separately
-      },
       orderBy: { createdAt: 'desc' }
     });
 

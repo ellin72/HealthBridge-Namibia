@@ -1,0 +1,286 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getWeightProgress = exports.getWeightEntries = exports.addWeightEntry = exports.updateWeightProgram = exports.getWeightProgramById = exports.getWeightPrograms = exports.createWeightProgram = void 0;
+const prisma_1 = require("../utils/prisma");
+// Create weight management program
+const createWeightProgram = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { providerId, programName, startWeight, targetWeight, goals, nutritionPlan, exercisePlan, } = req.body;
+        if (!programName || !startWeight) {
+            return res.status(400).json({ message: 'Program name and start weight are required' });
+        }
+        const program = await prisma_1.prisma.weightManagementProgram.create({
+            data: {
+                patientId: userId,
+                providerId,
+                programName,
+                startWeight,
+                targetWeight,
+                currentWeight: startWeight,
+                goals: goals ? JSON.stringify(goals) : null,
+                nutritionPlan: nutritionPlan ? JSON.stringify(nutritionPlan) : null,
+                exercisePlan: exercisePlan ? JSON.stringify(exercisePlan) : null,
+                status: 'ACTIVE',
+            },
+            include: {
+                patient: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                    },
+                },
+            },
+        });
+        res.status(201).json(program);
+    }
+    catch (error) {
+        console.error('Create weight program error:', error);
+        res.status(500).json({ message: 'Failed to create weight program', error: error.message });
+    }
+};
+exports.createWeightProgram = createWeightProgram;
+// Get patient's weight programs
+const getWeightPrograms = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { status } = req.query;
+        const where = { patientId: userId };
+        if (status) {
+            where.status = status;
+        }
+        const programs = await prisma_1.prisma.weightManagementProgram.findMany({
+            where,
+            include: {
+                _count: {
+                    select: {
+                        entries: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+        res.json(programs);
+    }
+    catch (error) {
+        console.error('Get weight programs error:', error);
+        res.status(500).json({ message: 'Failed to fetch weight programs', error: error.message });
+    }
+};
+exports.getWeightPrograms = getWeightPrograms;
+// Get weight program by ID
+const getWeightProgramById = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { id } = req.params;
+        const program = await prisma_1.prisma.weightManagementProgram.findFirst({
+            where: {
+                id,
+                patientId: userId,
+            },
+            include: {
+                entries: {
+                    orderBy: {
+                        recordedAt: 'desc',
+                    },
+                    take: 30,
+                },
+            },
+        });
+        if (!program) {
+            return res.status(404).json({ message: 'Weight program not found' });
+        }
+        res.json(program);
+    }
+    catch (error) {
+        console.error('Get weight program error:', error);
+        res.status(500).json({ message: 'Failed to fetch weight program', error: error.message });
+    }
+};
+exports.getWeightProgramById = getWeightProgramById;
+// Update weight program
+const updateWeightProgram = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { id } = req.params;
+        const { programName, targetWeight, goals, nutritionPlan, exercisePlan, status, } = req.body;
+        const program = await prisma_1.prisma.weightManagementProgram.findFirst({
+            where: {
+                id,
+                patientId: userId,
+            },
+        });
+        if (!program) {
+            return res.status(404).json({ message: 'Weight program not found' });
+        }
+        const updateData = {};
+        if (programName !== undefined)
+            updateData.programName = programName;
+        if (targetWeight !== undefined)
+            updateData.targetWeight = targetWeight;
+        if (goals !== undefined)
+            updateData.goals = goals ? JSON.stringify(goals) : null;
+        if (nutritionPlan !== undefined)
+            updateData.nutritionPlan = nutritionPlan ? JSON.stringify(nutritionPlan) : null;
+        if (exercisePlan !== undefined)
+            updateData.exercisePlan = exercisePlan ? JSON.stringify(exercisePlan) : null;
+        if (status !== undefined)
+            updateData.status = status;
+        const updated = await prisma_1.prisma.weightManagementProgram.update({
+            where: { id },
+            data: updateData,
+        });
+        res.json(updated);
+    }
+    catch (error) {
+        console.error('Update weight program error:', error);
+        res.status(500).json({ message: 'Failed to update weight program', error: error.message });
+    }
+};
+exports.updateWeightProgram = updateWeightProgram;
+// Add weight entry
+const addWeightEntry = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { programId, weight, bodyFat, muscleMass, measurements, notes } = req.body;
+        if (!programId || !weight) {
+            return res.status(400).json({ message: 'Program ID and weight are required' });
+        }
+        // Verify program belongs to user
+        const program = await prisma_1.prisma.weightManagementProgram.findFirst({
+            where: {
+                id: programId,
+                patientId: userId,
+            },
+        });
+        if (!program) {
+            return res.status(404).json({ message: 'Weight program not found' });
+        }
+        const entry = await prisma_1.prisma.weightEntry.create({
+            data: {
+                programId,
+                weight,
+                bodyFat,
+                muscleMass,
+                measurements: measurements ? JSON.stringify(measurements) : null,
+                notes,
+            },
+        });
+        // Update program's current weight
+        await prisma_1.prisma.weightManagementProgram.update({
+            where: { id: programId },
+            data: { currentWeight: weight },
+        });
+        res.status(201).json(entry);
+    }
+    catch (error) {
+        console.error('Add weight entry error:', error);
+        res.status(500).json({ message: 'Failed to add weight entry', error: error.message });
+    }
+};
+exports.addWeightEntry = addWeightEntry;
+// Get weight entries
+const getWeightEntries = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { programId, limit = 100, offset = 0 } = req.query;
+        if (!programId) {
+            return res.status(400).json({ message: 'Program ID is required' });
+        }
+        // Verify program belongs to user
+        const program = await prisma_1.prisma.weightManagementProgram.findFirst({
+            where: {
+                id: programId,
+                patientId: userId,
+            },
+        });
+        if (!program) {
+            return res.status(404).json({ message: 'Weight program not found' });
+        }
+        const entries = await prisma_1.prisma.weightEntry.findMany({
+            where: { programId: programId },
+            orderBy: {
+                recordedAt: 'desc',
+            },
+            take: Number(limit),
+            skip: Number(offset),
+        });
+        res.json(entries);
+    }
+    catch (error) {
+        console.error('Get weight entries error:', error);
+        res.status(500).json({ message: 'Failed to fetch weight entries', error: error.message });
+    }
+};
+exports.getWeightEntries = getWeightEntries;
+// Get weight progress statistics
+const getWeightProgress = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { id: programId } = req.params;
+        const program = await prisma_1.prisma.weightManagementProgram.findFirst({
+            where: {
+                id: programId,
+                patientId: userId,
+            },
+            include: {
+                entries: {
+                    orderBy: {
+                        recordedAt: 'asc',
+                    },
+                },
+            },
+        });
+        if (!program) {
+            return res.status(404).json({ message: 'Weight program not found' });
+        }
+        const entries = program.entries;
+        const totalWeightLoss = program.startWeight - (program.currentWeight || program.startWeight);
+        // Calculate target progress, handling division by zero when startWeight equals targetWeight
+        let targetProgress = null;
+        if (program.targetWeight) {
+            const weightDiff = program.startWeight - program.targetWeight;
+            if (Math.abs(weightDiff) > 0.01) { // Avoid division by zero (using small threshold for floating point)
+                const currentDiff = program.startWeight - (program.currentWeight || program.startWeight);
+                targetProgress = (currentDiff / weightDiff) * 100;
+            }
+            else {
+                // Maintenance goal (startWeight === targetWeight) - can't calculate meaningful progress
+                targetProgress = null;
+            }
+        }
+        // Calculate weight loss per week based on actual elapsed time
+        let weightLossPerWeek = null;
+        if (entries.length > 1) {
+            const oldestEntry = entries[0];
+            const newestEntry = entries[entries.length - 1];
+            const timeDiffMs = newestEntry.recordedAt.getTime() - oldestEntry.recordedAt.getTime();
+            const timeDiffWeeks = timeDiffMs / (1000 * 60 * 60 * 24 * 7); // Convert to weeks
+            if (timeDiffWeeks > 0) {
+                const weightDiff = newestEntry.weight - oldestEntry.weight; // Newest minus oldest (negative = loss)
+                weightLossPerWeek = -weightDiff / timeDiffWeeks; // Negative to show as positive loss
+            }
+        }
+        const stats = {
+            startWeight: program.startWeight,
+            currentWeight: program.currentWeight,
+            targetWeight: program.targetWeight,
+            totalWeightLoss,
+            targetProgress,
+            totalEntries: entries.length,
+            averageWeight: entries.length > 0
+                ? entries.reduce((sum, e) => sum + e.weight, 0) / entries.length
+                : null,
+            weightLossPerWeek,
+        };
+        res.json(stats);
+    }
+    catch (error) {
+        console.error('Get weight progress error:', error);
+        res.status(500).json({ message: 'Failed to fetch weight progress', error: error.message });
+    }
+};
+exports.getWeightProgress = getWeightProgress;
+//# sourceMappingURL=weightManagementController.js.map

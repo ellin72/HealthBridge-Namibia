@@ -1,0 +1,21 @@
+import { Response } from 'express';
+import { AuthRequest } from '../middleware/auth';
+export declare const generateResearchTopic: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const createResearchTopic: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getResearchTopics: (req: AuthRequest, res: Response) => Promise<void>;
+export declare const createProposal: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getProposals: (req: AuthRequest, res: Response) => Promise<void>;
+export declare const updateProposal: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const createResource: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getResources: (req: AuthRequest, res: Response) => Promise<void>;
+export declare const requestSupervisor: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getSupervisorRequests: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const respondToSupervisorRequest: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const createMilestone: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getMilestones: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const updateMilestone: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const createCollaboration: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getCollaborations: (req: AuthRequest, res: Response) => Promise<void>;
+export declare const updateCollaboration: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const deleteCollaboration: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+//# sourceMappingURL=researchController.d.ts.map

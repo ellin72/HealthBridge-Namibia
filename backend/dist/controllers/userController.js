@@ -1,0 +1,324 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getProviders = exports.deleteUser = exports.createUser = exports.updateUser = exports.getUserById = exports.getUsers = void 0;
+const prisma_1 = require("../utils/prisma");
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const getUsers = async (req, res) => {
+    try {
+        const { role, search } = req.query;
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        const where = {};
+        // ADMIN users can see all users (route is already protected by authorize(UserRole.ADMIN))
+        // Regular users can only see themselves
+        // Providers can only see patients who have chosen them
+        // Wellness coaches can only see users who have chosen them
+        if (userRole === 'ADMIN') {
+            // Admins can see all users - no restriction needed
+            // where clause remains empty to allow all users
+            // Note: Role and search filters (lines 47-57) still apply to ADMIN queries
+            // This allows admins to filter users by role or search terms for administrative purposes
+        }
+        else if (userRole === 'PATIENT' || userRole === 'STUDENT') {
+            // Patients/Students can only see themselves
+            where.id = userId;
+        }
+        else if (userRole === 'HEALTHCARE_PROVIDER') {
+            // Providers can only see patients who have appointments with them
+            const appointments = await prisma_1.prisma.appointment.findMany({
+                where: { providerId: userId },
+                select: { patientId: true },
+                distinct: ['patientId']
+            });
+            const patientIds = appointments.map(a => a.patientId);
+            if (patientIds.length === 0) {
+                // No patients, return empty result
+                where.id = '00000000-0000-0000-0000-000000000000';
+            }
+            else {
+                where.id = { in: patientIds };
+            }
+        }
+        else if (userRole === 'WELLNESS_COACH') {
+            // Wellness coaches can only see users who have wellness plans with them
+            // For now, return empty until we establish the relationship in schema
+            where.id = '00000000-0000-0000-0000-000000000000';
+        }
+        else {
+            // All other roles cannot see user list
+            where.id = '00000000-0000-0000-0000-000000000000';
+        }
+        if (role) {
+            where.role = role;
+        }
+        if (search) {
+            where.OR = [
+                { firstName: { contains: search, mode: 'insensitive' } },
+                { lastName: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } }
+            ];
+        }
+        const users = await prisma_1.prisma.user.findMany({
+            where,
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                role: true,
+                isActive: true,
+                createdAt: true
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(users);
+    }
+    catch (error) {
+        console.error('Get users error:', error);
+        res.status(500).json({ message: 'Failed to get users', error: error.message });
+    }
+};
+exports.getUsers = getUsers;
+const getUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        // Prevent "providers" from being treated as an ID
+        if (id === 'providers') {
+            return res.status(404).json({ message: 'Route not found' });
+        }
+        // Users can view their own profile
+        if (userId === id) {
+            // Allow access to own profile
+        }
+        else if (userRole === 'HEALTHCARE_PROVIDER') {
+            // Providers can only view profiles of patients who have chosen them
+            const hasRelationship = await prisma_1.prisma.appointment.findFirst({
+                where: {
+                    providerId: userId,
+                    patientId: id
+                }
+            });
+            if (!hasRelationship) {
+                return res.status(403).json({ message: 'Access denied. You can only view profiles of your patients.' });
+            }
+        }
+        else if (userRole === 'WELLNESS_COACH') {
+            // Wellness coaches can only view profiles of users who have chosen them
+            // For now, deny access until we establish the relationship
+            return res.status(403).json({ message: 'Access denied. You can only view profiles of your clients.' });
+        }
+        else {
+            // All other roles cannot view other users' profiles
+            return res.status(403).json({ message: 'Access denied' });
+        }
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                role: true,
+                isActive: true,
+                createdAt: true
+            }
+        });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json(user);
+    }
+    catch (error) {
+        console.error('Get user error:', error);
+        res.status(500).json({ message: 'Failed to get user', error: error.message });
+    }
+};
+exports.getUserById = getUserById;
+const updateUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { firstName, lastName, phone, password } = req.body;
+        // Users can only update their own profile
+        if (req.user?.id !== id) {
+            return res.status(403).json({ message: 'Access denied. You can only update your own profile.' });
+        }
+        const updateData = {};
+        if (firstName)
+            updateData.firstName = firstName;
+        if (lastName)
+            updateData.lastName = lastName;
+        if (phone)
+            updateData.phone = phone;
+        if (password) {
+            updateData.password = await bcryptjs_1.default.hash(password, 10);
+        }
+        const user = await prisma_1.prisma.user.update({
+            where: { id },
+            data: updateData,
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                role: true,
+                updatedAt: true
+            }
+        });
+        res.json({ message: 'User updated successfully', user });
+    }
+    catch (error) {
+        console.error('Update user error:', error);
+        res.status(500).json({ message: 'Failed to update user', error: error.message });
+    }
+};
+exports.updateUser = updateUser;
+const createUser = async (req, res) => {
+    try {
+        const { email, password, firstName, lastName, phone, role } = req.body;
+        // Validate required fields
+        if (!email || !password || !firstName || !lastName || !role) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+        // Check if user exists
+        const existingUser = await prisma_1.prisma.user.findUnique({
+            where: { email }
+        });
+        if (existingUser) {
+            return res.status(400).json({ message: 'User with this email already exists' });
+        }
+        // Hash password
+        const hashedPassword = await bcryptjs_1.default.hash(password, 10);
+        // Create user
+        const user = await prisma_1.prisma.user.create({
+            data: {
+                email,
+                password: hashedPassword,
+                firstName,
+                lastName,
+                phone,
+                role,
+                isActive: true
+            },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                role: true,
+                isActive: true,
+                createdAt: true
+            }
+        });
+        res.status(201).json({
+            message: 'User created successfully',
+            user
+        });
+    }
+    catch (error) {
+        console.error('Create user error:', error);
+        res.status(500).json({ message: 'Failed to create user', error: error.message });
+    }
+};
+exports.createUser = createUser;
+const deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma_1.prisma.user.delete({
+            where: { id }
+        });
+        res.json({ message: 'User deleted successfully' });
+    }
+    catch (error) {
+        console.error('Delete user error:', error);
+        res.status(500).json({ message: 'Failed to delete user', error: error.message });
+    }
+};
+exports.deleteUser = deleteUser;
+// Get healthcare providers (accessible to patients for booking appointments)
+const getProviders = async (req, res) => {
+    try {
+        console.log('getProviders called');
+        console.log('User:', req.user);
+        // This endpoint is accessible to all authenticated users
+        const { search } = req.query;
+        const where = {
+            role: 'HEALTHCARE_PROVIDER',
+            isActive: true
+        };
+        if (search) {
+            where.OR = [
+                { firstName: { contains: search, mode: 'insensitive' } },
+                { lastName: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } }
+            ];
+        }
+        const providers = await prisma_1.prisma.user.findMany({
+            where,
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                role: true,
+                createdAt: true,
+                providerFee: {
+                    select: {
+                        consultationFee: true,
+                        serviceFees: true,
+                        currency: true,
+                        isActive: true
+                    }
+                }
+            },
+            orderBy: [
+                { lastName: 'asc' },
+                { firstName: 'asc' }
+            ]
+        });
+        // Format providers with fee information
+        const providersWithFees = providers.map(provider => {
+            let serviceFees = null;
+            if (provider.providerFee?.serviceFees) {
+                try {
+                    serviceFees = JSON.parse(provider.providerFee.serviceFees);
+                }
+                catch (parseError) {
+                    console.warn(`Failed to parse serviceFees for provider ${provider.id}:`, parseError);
+                    serviceFees = null;
+                }
+            }
+            return {
+                id: provider.id,
+                email: provider.email,
+                firstName: provider.firstName,
+                lastName: provider.lastName,
+                phone: provider.phone,
+                role: provider.role,
+                createdAt: provider.createdAt,
+                consultationFee: provider.providerFee?.consultationFee || 500, // Default to 500 if no fee set
+                serviceFees,
+                currency: provider.providerFee?.currency || 'NAD',
+                feeActive: provider.providerFee?.isActive ?? true
+            };
+        });
+        console.log(`Found ${providersWithFees.length} healthcare providers`);
+        console.log('Providers:', providersWithFees.map(p => `${p.firstName} ${p.lastName} - ${p.currency} ${p.consultationFee}`));
+        res.json(providersWithFees);
+    }
+    catch (error) {
+        console.error('Get providers error:', error);
+        res.status(500).json({ message: 'Failed to get providers', error: error.message });
+    }
+};
+exports.getProviders = getProviders;
+//# sourceMappingURL=userController.js.map
