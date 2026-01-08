@@ -26,7 +26,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   CircularProgress,
   Alert
 } from '@mui/material';
@@ -61,7 +60,6 @@ const TelehealthPro: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [formData, setFormData] = useState({
     appointmentId: '',
     provider: 'ZOOM',
@@ -141,7 +139,7 @@ const TelehealthPro: React.FC = () => {
           </Box>
 
           <Card sx={{ mb: 3 }}>
-            <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
+            <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
               <Tab icon={<VideoCallIcon />} label="Video Consultations" />
               <Tab icon={<HistoryIcon />} label="Patient History" />
               {(user?.role === 'HEALTHCARE_PROVIDER' || user?.role === 'ADMIN') && (

@@ -9,7 +9,6 @@ import {
   Button,
   List,
   ListItem,
-  ListItemText,
   CircularProgress,
   Alert,
 } from '@mui/material';
@@ -19,7 +18,6 @@ import {
   CheckCircle as CheckIcon,
 } from '@mui/icons-material';
 import api from '../services/authService';
-import { format } from 'date-fns';
 
 const MedicationReminders: React.FC = () => {
   const { data: medications, isLoading } = useQuery(

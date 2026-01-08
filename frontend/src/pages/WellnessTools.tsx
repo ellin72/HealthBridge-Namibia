@@ -21,19 +21,16 @@ import {
   Tabs,
   Chip,
   LinearProgress,
-  CircularProgress,
   Alert,
   List,
   ListItem,
-  ListItemText,
-  IconButton
+  ListItemText
 } from '@mui/material';
 import {
   FitnessCenter as FitnessIcon,
   TrackChanges as TrackIcon,
   EmojiEvents as ChallengeIcon,
-  Add as AddIcon,
-  Delete as DeleteIcon
+  Add as AddIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/authService';
@@ -175,7 +172,7 @@ const WellnessTools: React.FC = () => {
           </Box>
 
           <Card>
-            <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
+            <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
               <Tab icon={<FitnessIcon />} label="Wellness Plans" />
               <Tab icon={<TrackIcon />} label="Habit Tracking" />
               <Tab icon={<ChallengeIcon />} label="Challenges" />

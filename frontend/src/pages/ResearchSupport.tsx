@@ -20,7 +20,6 @@ import {
   Tab,
   Tabs,
   Chip,
-  CircularProgress,
   Alert,
   List,
   ListItem,
@@ -37,7 +36,6 @@ import {
   TableRow
 } from '@mui/material';
 import {
-  School as SchoolIcon,
   Lightbulb as TopicIcon,
   Description as ProposalIcon,
   LibraryBooks as LibraryIcon,
@@ -223,7 +221,7 @@ const ResearchSupport: React.FC = () => {
           </Box>
 
           <Card>
-            <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
+            <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
               <Tab icon={<TopicIcon />} label="Topic Generator" />
               <Tab icon={<ProposalIcon />} label="Proposal Builder" />
               <Tab icon={<LibraryIcon />} label="Resource Library" />

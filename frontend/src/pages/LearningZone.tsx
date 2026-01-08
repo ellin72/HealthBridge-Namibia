@@ -20,13 +20,11 @@ import {
   Menu,
   MenuItem,
   InputAdornment,
-  LinearProgress,
   Avatar,
   Divider,
   Paper,
   Tabs,
   Tab,
-  Badge,
 } from '@mui/material';
 import {
   Upload as UploadIcon,
@@ -34,10 +32,8 @@ import {
   Assignment as AssignmentIcon,
   Download as DownloadIcon,
   Search as SearchIcon,
-  FilterList as FilterListIcon,
   MoreVert as MoreVertIcon,
   CheckCircle as CheckCircleIcon,
-  Pending as PendingIcon,
   Grade as GradeIcon,
   Schedule as ScheduleIcon,
   Person as PersonIcon,
@@ -400,7 +396,7 @@ const LearningZone: React.FC = () => {
           </Paper>
 
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-            <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+            <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
               <Tab
                 label={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

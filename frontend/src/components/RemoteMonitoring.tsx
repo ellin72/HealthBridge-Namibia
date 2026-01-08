@@ -9,13 +9,7 @@ import {
   Chip,
   CircularProgress,
   Alert,
-  LinearProgress,
 } from '@mui/material';
-import {
-  MonitorHeart as MonitorIcon,
-  TrendingUp as TrendingIcon,
-  Warning as WarningIcon,
-} from '@mui/icons-material';
 import api from '../services/authService';
 import { format } from 'date-fns';
 
@@ -37,14 +31,6 @@ const RemoteMonitoring: React.FC = () => {
       </Box>
     );
   }
-
-  const metricTypes = [
-    { type: 'BLOOD_PRESSURE_SYSTOLIC', label: 'Blood Pressure (Systolic)', unit: 'mmHg' },
-    { type: 'BLOOD_PRESSURE_DIASTOLIC', label: 'Blood Pressure (Diastolic)', unit: 'mmHg' },
-    { type: 'HEART_RATE', label: 'Heart Rate', unit: 'bpm' },
-    { type: 'GLUCOSE', label: 'Blood Glucose', unit: 'mg/dL' },
-    { type: 'WEIGHT', label: 'Weight', unit: 'kg' },
-  ];
 
   return (
     <Box>

@@ -7,7 +7,7 @@ interface FeedbackFormProps {
 }
 
 const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel }) => {
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const [formData, setFormData] = useState({
     feedbackType: 'GENERAL',
     category: '',

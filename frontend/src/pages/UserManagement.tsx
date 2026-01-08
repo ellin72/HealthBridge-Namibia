@@ -11,7 +11,6 @@ import {
   TextField,
   Box,
   Card,
-  CardContent,
   Grid,
   MenuItem,
   Select,
@@ -27,14 +26,12 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow,
-  Paper
+  TableRow
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Person as PersonIcon,
   Email as EmailIcon,
   Phone as PhoneIcon
 } from '@mui/icons-material';

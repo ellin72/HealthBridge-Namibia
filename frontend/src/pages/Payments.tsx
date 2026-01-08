@@ -17,11 +17,6 @@ import {
   Paper,
   Chip,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   Alert
 } from '@mui/material';
 import {
@@ -69,7 +64,7 @@ const Payments: React.FC = () => {
     return payment.status === filterStatus;
   });
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string): JSX.Element | undefined => {
     switch (status) {
       case 'COMPLETED':
         return <SuccessIcon color="success" />;
@@ -78,7 +73,7 @@ const Payments: React.FC = () => {
       case 'FAILED':
         return <ErrorIcon color="error" />;
       default:
-        return null;
+        return undefined;
     }
   };
 

@@ -3,10 +3,8 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import {
   Container,
   Typography,
-  Grid,
   Card,
   CardContent,
-  CardActions,
   Button,
   Box,
   CircularProgress,
@@ -21,14 +19,11 @@ import {
   Tab,
   Accordion,
   AccordionSummary,
-  AccordionDetails,
-  IconButton,
-  Tooltip
+  AccordionDetails
 } from '@mui/material';
 import {
   Add as AddIcon,
   ExpandMore as ExpandMoreIcon,
-  Edit as EditIcon,
   Policy as PolicyIcon,
   CheckCircle as ActiveIcon
 } from '@mui/icons-material';
@@ -87,7 +82,7 @@ const Policies: React.FC = () => {
     createPolicyMutation.mutate(newPolicy);
   };
 
-  const handleAccordionChange = (policyId: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
+  const handleAccordionChange = (policyId: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpandedPolicy(isExpanded ? policyId : false);
   };
 
@@ -131,7 +126,7 @@ const Policies: React.FC = () => {
 
         <Card>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+            <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
               <Tab label="Active" />
               <Tab label="Inactive" />
               <Tab label="All" />

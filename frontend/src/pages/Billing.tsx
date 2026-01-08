@@ -15,12 +15,10 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  TextField,
-  MenuItem,
   FormControl,
   InputLabel,
   Select,
+  MenuItem,
   Button,
   Dialog,
   DialogTitle,
@@ -38,11 +36,9 @@ import {
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/authService';
-import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const Billing: React.FC = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);

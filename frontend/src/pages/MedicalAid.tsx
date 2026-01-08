@@ -18,7 +18,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -93,15 +92,6 @@ const MedicalAid: React.FC = () => {
       onSuccess: () => {
         queryClient.invalidateQueries('medical-aid');
         setVerifyDialogOpen(false);
-      }
-    }
-  );
-
-  const submitClaimMutation = useMutation(
-    (data: { appointmentId?: string; amount: number }) => api.post('/medical-aid/claims', data),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('medical-aid-claims');
       }
     }
   );

@@ -30,7 +30,6 @@ import {
   Cancel as CancelIcon,
   Event as EventIcon,
   Schedule as ScheduleIcon,
-  Edit as EditIcon,
   MedicalServices as MedicalServicesIcon,
   Note as NoteIcon,
   Visibility as VisibilityIcon,
@@ -58,7 +57,6 @@ const Appointments: React.FC = () => {
   const [viewConsultationOpen, setViewConsultationOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [menuAppointmentId, setMenuAppointmentId] = useState<string | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<any>(null);
   const [formData, setFormData] = useState({
     providerId: '',
@@ -120,7 +118,7 @@ const Appointments: React.FC = () => {
     { value: 'BANK_TRANSFER', label: 'Bank Transfer', icon: <BankIcon sx={{ fontSize: 20 }} /> },
   ];
 
-  const { data: providers, isLoading: providersLoading, error: providersError } = useQuery(
+  const { data: providers, isLoading: providersLoading, error: providersError } = useQuery<any, Error>(
     'providers',
     async () => {
       try {
@@ -184,8 +182,9 @@ const Appointments: React.FC = () => {
           
           // Return both appointment and payment info
           return {
-            ...appointmentResponse,
-            payment: paymentResponse.data.payment
+            appointment: appointmentResponse.data.appointment,
+            invoice: appointmentResponse.data.invoice,
+            payment: paymentResponse.data.payment,
           };
         } catch (paymentError: any) {
           console.error('Payment error:', paymentError);
@@ -205,7 +204,11 @@ const Appointments: React.FC = () => {
         }
       }
       
-      return appointmentResponse;
+      // Return appointment and invoice info without payment
+      return {
+        appointment: appointmentResponse.data.appointment,
+        invoice: appointmentResponse.data.invoice,
+      };
     },
     {
       onSuccess: (data) => {
@@ -218,7 +221,7 @@ const Appointments: React.FC = () => {
         // Show success message
         const fee = selectedProvider?.consultationFee || 500;
         const currency = selectedProvider?.currency || 'NAD';
-        if (data.payment?.status === 'COMPLETED') {
+        if ((data as any).payment?.status === 'COMPLETED') {
           alert(`Appointment booked successfully! Payment of ${currency} ${fee.toFixed(2)} has been processed.`);
         } else {
           alert('Appointment booked successfully! Please complete payment to confirm your appointment.');
@@ -294,13 +297,11 @@ const Appointments: React.FC = () => {
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, appointment: any) => {
     setAnchorEl(event.currentTarget);
-    setMenuAppointmentId(appointment.id);
     setSelectedAppointment(appointment);
   };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
-    setMenuAppointmentId(null);
   };
 
   const handleCancel = (appointment: any) => {

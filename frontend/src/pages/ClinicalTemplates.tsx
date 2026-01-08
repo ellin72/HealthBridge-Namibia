@@ -21,7 +21,6 @@ import {
   InputLabel,
   Select,
   Alert,
-  IconButton,
 } from '@mui/material';
 import {
   Description as TemplateIcon,
@@ -32,12 +31,10 @@ import {
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/authService';
-import { useAuth } from '../contexts/AuthContext';
 
 const ClinicalTemplates: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -70,7 +67,7 @@ const ClinicalTemplates: React.FC = () => {
       onSuccess: () => {
         queryClient.invalidateQueries('clinical-templates');
         setOpen(false);
-        setFormData({ name: '', category: '', content: '', isDefault: false });
+        setFormData({ name: '', category: '', templateData: '', isDefault: false });
         setError('');
       },
       onError: (err: any) => {
@@ -424,8 +421,8 @@ const ClinicalTemplates: React.FC = () => {
               <TextField
                 fullWidth
                 label="Content"
-                value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                value={formData.templateData}
+                onChange={(e) => setFormData({ ...formData, templateData: e.target.value })}
                 multiline
                 rows={10}
                 required

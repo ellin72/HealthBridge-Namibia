@@ -6,7 +6,6 @@ import {
   TextField,
   Button,
   Box,
-  Paper,
   Alert,
   Grid,
   Card,
@@ -48,7 +47,7 @@ const Profile: React.FC = () => {
   const [passwordMessage, setPasswordMessage] = useState('');
   const queryClient = useQueryClient();
 
-  const { data: profile } = useQuery(
+  const { data: _profile } = useQuery(
     'profile',
     () => api.get('/auth/profile').then(res => res.data),
     {
