@@ -264,10 +264,13 @@ Key relationships in the system:
 - React 18 with TypeScript
 - Vite 5 for build tooling and dev server
 - Material-UI (MUI) for components
-- React Router for navigation
+- React Router for navigation with role-based routing
 - Axios for API calls
 - React Query for data fetching
 - i18next for internationalization
+- Role-based dashboards and navigation
+- Global navigation bar with contextual filtering
+- Quick action tiles for common tasks
 
 ### Mobile
 - React Native with TypeScript
@@ -357,35 +360,45 @@ HealthBridge-Namibia/
 ## User Roles
 
 1. **Patients**: 
+   - **Dashboard**: Book Appointment, Symptom Checker, Wellness Hub, Billing
    - Book appointments, access wellness content
    - Use symptom checker for triage
    - Track wellness habits and join challenges
    - Access medical aid information and claims
    - View comprehensive medical history
+   - Quick Actions: Book Appointment Now, Symptom Checker, Wellness Hub, Pay Invoice
 
 2. **Healthcare Providers**: 
+   - **Dashboard**: Manage Appointments, Consultation Notes, Patient History, Earnings
    - Manage appointments and create consultation notes
    - Conduct video consultations
    - Access patient medical history
    - View provider analytics
    - Create assignments for students
    - Grade student assignments
+   - Quick Actions: Manage Appointments, Consultation Notes, Patient History, View Earnings
 
 3. **Wellness Coaches**: 
+   - **Dashboard**: Create Content, Launch Challenges, Engagement Analytics
    - Create and manage wellness content
    - Create wellness challenges
    - Monitor community engagement
+   - Quick Actions: Create Content, Launch Challenge, Engagement Analytics
 
 4. **Students**: 
+   - **Dashboard**: Learning Zone, Assignment Submission, Research Tools
    - Access learning resources and submit assignments
    - Use research support tools (topic generator, proposal builder)
    - Connect with supervisors
    - Track research milestones
    - Collaborate on research projects
+   - Quick Actions: Learning Zone, Upload Assignment, Research Tools
 
 5. **Admin**: 
+   - **Dashboard**: User Management, System Monitoring, Fraud Detection
    - User management
    - System administration
+   - Quick Actions: User Management, System Monitoring, Fraud Detection
 
 ## Features
 
@@ -473,6 +486,13 @@ HealthBridge-Namibia/
 - POPIA/HIPAA compliance structure
 - FHIR interoperability for healthcare system integration
 
+#### Navigation & User Experience
+- **Role-Based Dashboards**: Tailored dashboards for each user role (Patient, Provider, Coach, Student, Admin)
+- **Global Navigation Bar**: Persistent navigation with role-filtered items (Home, Appointments, Wellness, Learning, Billing, Settings)
+- **Quick Action Tiles**: Prominent shortcuts for common tasks based on user role
+- **Contextual Authentication**: Smart redirect to originally requested page after login
+- **Responsive Design**: Mobile-friendly navigation with horizontal scroll on small screens
+
 ## Documentation
 
 - **[startup.md](./startup.md)** - Step-by-step startup guide for new developers ⭐ **Start here!**
@@ -513,15 +533,32 @@ The mobile app uses Expo:
 **Backend Production**:
 ```bash
 cd backend
-npm run build                      # Compile TypeScript
-npm start                          # Run compiled JavaScript
+npm run build                      # Compile TypeScript to dist/
+npm start                          # Run compiled JavaScript from dist/server.js
+```
+
+**Backend Development**:
+```bash
+cd backend
+npm run dev                        # Start with tsx watch (hot-reload)
+# Or with Docker:
+npm run dev:docker                  # Run in Docker container with hot-reload
 ```
 
 **Frontend Production**:
 ```bash
 cd frontend
-npm run build                      # Create production bundle
+npm run build                      # Create production bundle (TypeScript + Vite)
+# Build output: frontend/dist/ with optimized static assets
 # Serve dist/ directory with a static file server (nginx, etc.)
+```
+
+**Frontend Development**:
+```bash
+cd frontend
+npm run dev                        # Start Vite dev server with HMR
+# Runs on http://localhost:3000
+# Hot module replacement (HMR) enabled for instant updates
 ```
 
 **Docker Production**:
@@ -547,6 +584,31 @@ docker-compose --profile production up -d
 - **TypeScript**: 5.3+ (for backend and frontend)
 - **Expo CLI**: For mobile production builds (install globally: `npm install -g expo-cli`)
 
+### Frontend Architecture
+
+The frontend uses a modular, role-based architecture:
+
+**Component Structure**:
+- **Pages**: Main route components (`/pages/`)
+- **Role-Based Dashboards**: Specialized dashboards in `components/dashboards/`
+  - Each role has a dedicated dashboard component
+  - Dashboards include quick action tiles and role-specific stats
+- **Layout Components**: 
+  - `Layout.tsx`: Main app layout with sidebar navigation
+  - `GlobalNavBar.tsx`: Persistent top navigation bar
+  - `QuickActionTiles.tsx`: Role-specific quick action cards
+- **Authentication**: 
+  - `PrivateRoute.tsx`: Protected routes with redirect support
+  - `AuthContext.tsx`: Global authentication state management
+  - Contextual redirects preserve user navigation intent
+
+**Navigation Flow**:
+1. User attempts to access protected route
+2. If not authenticated, redirected to login with `state.from` saved
+3. After login, user redirected to originally requested page
+4. Dashboard shows role-specific content and quick actions
+5. Global nav bar provides persistent access to main sections
+
 ## Development
 
 ### Project Structure
@@ -569,6 +631,15 @@ HealthBridge-Namibia/
 │   ├── src/
 │   │   ├── pages/             # Page components
 │   │   ├── components/        # Reusable components
+│   │   │   ├── dashboards/    # Role-based dashboard components
+│   │   │   │   ├── PatientDashboard.tsx
+│   │   │   │   ├── ProviderDashboard.tsx
+│   │   │   │   ├── CoachDashboard.tsx
+│   │   │   │   ├── StudentDashboard.tsx
+│   │   │   │   └── AdminDashboard.tsx
+│   │   │   ├── GlobalNavBar.tsx      # Global navigation bar
+│   │   │   ├── QuickActionTiles.tsx  # Quick action cards
+│   │   │   └── Layout.tsx            # Main layout wrapper
 │   │   ├── contexts/          # React contexts (Auth, etc.)
 │   │   ├── services/          # API service functions
 │   │   └── utils/             # Helper functions
@@ -588,7 +659,8 @@ HealthBridge-Namibia/
 ### Key Technologies
 
 - **Backend**: Express.js, TypeScript, Prisma ORM, JWT, bcrypt, tsx (dev), tsc (build)
-- **Frontend**: React, TypeScript, Vite, Material-UI, React Router, React Query, i18next
+- **Frontend**: React, TypeScript, Vite, Material-UI, React Router (with role-based routing), React Query, i18next
+- **Frontend Navigation**: Role-based dashboards, GlobalNavBar, QuickActionTiles, contextual authentication redirects
 - **Mobile**: React Native, Expo SDK 54, TypeScript, React Navigation
 - **Database**: PostgreSQL 14+ with Prisma ORM
 - **Containerization**: Docker, Docker Compose (with profiles: local, production, load-test)

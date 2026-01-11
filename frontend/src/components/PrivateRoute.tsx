@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface PrivateRouteProps {
@@ -8,13 +8,15 @@ interface PrivateRouteProps {
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    // Save the attempted location for redirect after login
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

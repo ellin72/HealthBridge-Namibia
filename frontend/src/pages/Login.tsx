@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -32,6 +32,7 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +41,9 @@ const Login: React.FC = () => {
 
     try {
       await login(email, password);
-      navigate('/dashboard');
+      // Redirect to the page user was trying to access, or dashboard
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed');
     } finally {

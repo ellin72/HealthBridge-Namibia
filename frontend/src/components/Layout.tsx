@@ -54,6 +54,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import LanguageSelector from './LanguageSelector';
+import GlobalNavBar from './GlobalNavBar';
 
 const logoPath = '/healthbridge-logo.png';
 const drawerWidth = 280;
@@ -835,14 +836,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2, sm: 3 },
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           backgroundColor: '#f8fafc',
           minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <Toolbar />
-        <Box sx={{ maxWidth: '1400px', mx: 'auto' }}>{children}</Box>
+        <GlobalNavBar />
+        <Box sx={{ flex: 1, p: { xs: 2, sm: 3 } }}>
+          <Box sx={{ maxWidth: '1400px', mx: 'auto' }}>{children}</Box>
+        </Box>
       </Box>
     </Box>
   );
