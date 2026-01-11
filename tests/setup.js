@@ -7,15 +7,16 @@
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-key-for-testing-only';
 
-// Set DATABASE_URL for tests - use TEST_DATABASE_URL if provided, otherwise use DATABASE_URL,
-// or provide a default for local testing (cleanup will gracefully skip if database is not available)
-// Note: The default assumes a local PostgreSQL database. If you don't have one, cleanup will be skipped.
+// Set DATABASE_URL for tests - use TEST_DATABASE_URL if provided, otherwise use DATABASE_URL
+// IMPORTANT: Never hardcode credentials in source files. Always use environment variables.
+// For local testing, set TEST_DATABASE_URL or DATABASE_URL environment variable.
+// Example: export TEST_DATABASE_URL="postgresql://user:password@localhost:5432/healthbridge_test?schema=public"
+// If neither is set, database cleanup will be skipped gracefully.
 // IMPORTANT: For tests to work, you need:
 // 1. A test database created: CREATE DATABASE healthbridge_test;
 // 2. Database migrations run: cd backend && npx prisma migrate deploy (or npx prisma db push)
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL ||
-    process.env.DATABASE_URL ||
-    'postgresql://postgres:elcorpnamibia@localhost:5432/healthbridge_test?schema=public';
+//3. TEST_DATABASE_URL or DATABASE_URL environment variable set with valid credentials
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 
 // Increase timeout for async operations
 jest.setTimeout(30000);

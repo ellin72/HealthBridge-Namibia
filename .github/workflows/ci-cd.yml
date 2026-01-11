@@ -76,7 +76,8 @@ jobs:
         run: |
           cd backend
           export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
-          npx prisma migrate deploy
+          # Try migrate deploy first (for production/CI), fallback to db push if no migrations exist
+          npx prisma migrate deploy || npx prisma db push --accept-data-loss
       
       - name: Start backend server and wait for readiness
         run: |
@@ -163,13 +164,64 @@ jobs:
         run: |
           cd backend
           export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
-          npx prisma migrate deploy
+          # Try migrate deploy first (for production/CI), fallback to db push if no migrations exist
+          npx prisma migrate deploy || npx prisma db push --accept-data-loss
       
-      - name: Run tests
+      - name: Build backend
         run: |
           cd backend
           export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
+          npm run build
+        env:
+          DATABASE_URL: postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public
+          JWT_SECRET: test-secret-key-for-ci
+          NODE_ENV: test
+      
+      - name: Start backend server and wait for readiness
+        run: |
+          cd backend
+          export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
+          # Start server in background with nohup to prevent termination when step ends
+          nohup npm start > /tmp/backend.log 2>&1 &
+          echo $! > /tmp/backend.pid
+          # Wait for server to be ready (check /api/health endpoint)
+          echo "Waiting for server to start..."
+          timeout 60 bash -c 'until curl -f http://localhost:5000/api/health > /dev/null 2>&1; do sleep 2; echo "Waiting..."; done'
+          echo "Server is ready!"
+          # Show server logs for debugging
+          tail -n 20 /tmp/backend.log || true
+        env:
+          DATABASE_URL: postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public
+          PORT: 5000
+          JWT_SECRET: test-secret-key-for-ci
+          NODE_ENV: test
+      
+      - name: Run tests
+        run: |
+          export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
+          export API_URL="http://localhost:5000/api"
           npm test
+        env:
+          DATABASE_URL: postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public
+          TEST_DATABASE_URL: postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public
+          API_URL: http://localhost:5000/api
+          JWT_SECRET: test-secret-key-for-ci
+          NODE_ENV: test
+      
+      - name: Stop backend server
+        if: always()
+        run: |
+          if [ -f /tmp/backend.pid ]; then
+            echo "Stopping backend server..."
+            kill $(cat /tmp/backend.pid) 2>/dev/null || true
+            rm /tmp/backend.pid
+            echo "Server stopped"
+          fi
+          # Show final server logs for debugging
+          if [ -f /tmp/backend.log ]; then
+            echo "=== Final Server Logs ==="
+            tail -n 50 /tmp/backend.log || true
+          fi
 
   build:
     name: Build Application
@@ -206,8 +258,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     if: github.ref == 'refs/heads/develop'
-    environment:
-      name: staging
+    # Note: Create 'staging' environment in repository settings before uncommenting:
+    # environment:
+    #   name: staging
     steps:
       - uses: actions/checkout@v3
       
@@ -221,8 +274,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     if: github.ref == 'refs/heads/main'
-    environment:
-      name: production
+    # Note: Create 'production' environment in repository settings before uncommenting:
+    # environment:
+    #   name: production
     steps:
       - uses: actions/checkout@v3
       

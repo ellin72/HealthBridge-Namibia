@@ -157,25 +157,21 @@ class TestDataTracker {
         }
         console.log(`✅ Cleaned up ${ids.length} ${type}`);
       } catch (error) {
-        // Check if this is a database connection error
+        // Check if this is a database connection error or schema missing
         if (isDatabaseConnectionError(error)) {
           if (!connectionErrorOccurred && !dbConnectionFailed) {
-            console.warn('⚠️  Database connection failed - skipping cleanup. Tests passed, but test data may remain in database.');
-            console.warn('   To enable cleanup, ensure DATABASE_URL points to a valid database with correct credentials.');
+            // Provide specific message based on error type
+            if (error.message && error.message.includes('does not exist')) {
+              console.warn('⚠️  Database schema not found - skipping cleanup. Tests passed, but test data may remain in database.');
+              console.warn('   Run migrations on the test database to enable cleanup.');
+            } else {
+              console.warn('⚠️  Database connection failed - skipping cleanup. Tests passed, but test data may remain in database.');
+              console.warn('   To enable cleanup, ensure DATABASE_URL points to a valid database with correct credentials.');
+            }
             dbConnectionFailed = true;
             connectionErrorOccurred = true;
           }
-          // Stop trying to clean up if we can't connect
-          break;
-        } else if (error.message && error.message.includes('does not exist')) {
-          // Schema/table doesn't exist - this is expected if migrations haven't run
-          if (!connectionErrorOccurred && !dbConnectionFailed) {
-            console.warn('⚠️  Database schema not found - skipping cleanup. Tests passed, but test data may remain in database.');
-            console.warn('   Run migrations on the test database to enable cleanup.');
-            dbConnectionFailed = true;
-            connectionErrorOccurred = true;
-          }
-          // Stop trying to clean up if schema doesn't exist
+          // Stop trying to clean up if we can't connect or schema doesn't exist
           break;
         } else {
           // Other errors (e.g., foreign key constraints) - log but continue
@@ -238,18 +234,17 @@ class TestDataTracker {
 
       console.log(`✅ Cleaned up ${userIds.length} users matching pattern: ${pattern}`);
     } catch (error) {
-      // Check if this is a database connection error
+      // Check if this is a database connection error or schema missing
       if (isDatabaseConnectionError(error)) {
         if (!dbConnectionFailed) {
-          console.warn('⚠️  Database connection failed - skipping cleanup by email pattern.');
-          console.warn('   To enable cleanup, ensure DATABASE_URL points to a valid database with correct credentials.');
-          dbConnectionFailed = true;
-        }
-      } else if (error.message && error.message.includes('does not exist')) {
-        // Schema/table doesn't exist - this is expected if migrations haven't run
-        if (!dbConnectionFailed) {
-          console.warn('⚠️  Database schema not found - skipping cleanup by email pattern.');
-          console.warn('   Run migrations on the test database to enable cleanup.');
+          // Provide specific message based on error type
+          if (error.message && error.message.includes('does not exist')) {
+            console.warn('⚠️  Database schema not found - skipping cleanup by email pattern.');
+            console.warn('   Run migrations on the test database to enable cleanup.');
+          } else {
+            console.warn('⚠️  Database connection failed - skipping cleanup by email pattern.');
+            console.warn('   To enable cleanup, ensure DATABASE_URL points to a valid database with correct credentials.');
+          }
           dbConnectionFailed = true;
         }
       } else {
