@@ -98,6 +98,22 @@ app.use(express.urlencoded({ extended: true }));
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// API root endpoint
+app.get('/api', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'HealthBridge API is running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      users: '/api/users',
+      appointments: '/api/appointments',
+      notifications: '/api/notifications'
+    }
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'HealthBridge API is running' });

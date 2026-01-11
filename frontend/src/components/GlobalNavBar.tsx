@@ -5,7 +5,6 @@ import {
   Toolbar,
   Box,
   Button,
-  Badge,
   alpha,
   useTheme,
   useMediaQuery
@@ -16,7 +15,6 @@ import {
   FitnessCenter as WellnessIcon,
   School as LearningIcon,
   Receipt as BillingIcon,
-  Notifications as NotificationsIcon,
   Settings as SettingsIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';

@@ -7,7 +7,6 @@ import {
   IconButton,
   Button,
   Stack,
-  alpha,
   useTheme,
   useMediaQuery
 } from '@mui/material';

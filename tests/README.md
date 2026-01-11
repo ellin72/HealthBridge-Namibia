@@ -42,6 +42,31 @@ npm run install:all
 
 ## Running Tests
 
+### Prerequisites
+
+Before running tests, ensure:
+
+1. **Test database is created and migrated**:
+   ```bash
+   # Create test database
+   psql -U postgres -c "CREATE DATABASE healthbridge_test;"
+   
+   # Run migrations
+   cd backend
+   export DATABASE_URL="postgresql://user:pass@localhost:5432/healthbridge_test?schema=public"
+   npx prisma migrate deploy
+   # OR for development:
+   npx prisma db push
+   ```
+
+2. **API server is running** (for integration tests):
+   ```bash
+   cd backend
+   npm run dev
+   ```
+
+### Running Tests
+
 ```bash
 # Run all tests
 npm test
@@ -242,15 +267,29 @@ The test suite is designed for CI/CD integration:
 ### Connection Refused
 
 If you see "Connection refused" errors:
-- Ensure the API server is running: `cd backend && npm run dev`
-- Check the `API_URL` environment variable
+- **Start the API server before running tests**: 
+  ```bash
+  cd backend
+  npm run dev
+  ```
+- Check the `API_URL` environment variable (default: `http://localhost:5000/api`)
+- In CI/CD, ensure the server is started in a separate step before running tests
 
 ### Database Errors
 
 If you see database errors:
 - Ensure the database is running and accessible
 - Check `DATABASE_URL` or `TEST_DATABASE_URL`
-- Verify Prisma migrations are applied
+- **Create the test database**: `CREATE DATABASE healthbridge_test;`
+- **Run migrations on test database**:
+  ```bash
+  cd backend
+  export DATABASE_URL="postgresql://user:pass@localhost:5432/healthbridge_test?schema=public"
+  npx prisma migrate deploy
+  # OR for development:
+  npx prisma db push
+  ```
+- If you see "table does not exist" errors, the database schema hasn't been migrated yet
 
 ### Timeout Errors
 

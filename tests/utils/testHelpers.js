@@ -47,7 +47,12 @@ async function makeRequest(method, url, data = null, token = null, options = {})
     };
   } catch (error) {
     if (error.code === 'ECONNREFUSED') {
-      throw new Error(`Connection refused. Is the API server running at ${API_URL}?`);
+      const errorMsg = `Connection refused. Is the API server running at ${API_URL}?\n` +
+        `To start the server:\n` +
+        `  1. cd backend\n` +
+        `  2. npm run dev\n` +
+        `Or in CI/CD, ensure the server is started before running tests.`;
+      throw new Error(errorMsg);
     }
     
     const status = error.response?.status || 500;
