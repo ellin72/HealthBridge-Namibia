@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Container,
   Typography,
@@ -21,10 +21,8 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { useAuth } from '../contexts/AuthContext';
 
 const MentalHealth: React.FC = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const services = [

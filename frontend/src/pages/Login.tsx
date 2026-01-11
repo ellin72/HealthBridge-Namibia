@@ -9,20 +9,19 @@ import {
   Box,
   Alert,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  Divider,
+  Stack
 } from '@mui/material';
 import {
-  ArrowBack as ArrowBackIcon,
   Email as EmailIcon,
   Lock as LockIcon,
   Visibility,
-  VisibilityOff
+  VisibilityOff,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-
-// Import logo - Place logo in public folder as /healthbridge-logo.png
-// Or use: import logoPath from '../assets/images/healthbridge-logo.png';
-const logoPath = '/healthbridge-logo.png';
+import LogoIcon from '../components/LogoIcon';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -56,10 +55,9 @@ const Login: React.FC = () => {
       sx={{
         minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         position: 'relative',
-        py: 4,
+        overflow: 'hidden',
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -72,35 +70,72 @@ const Login: React.FC = () => {
         },
       }}
     >
-      <Container maxWidth="sm">
+      <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', minHeight: '100vh', py: 4 }}>
         <Box
           sx={{
             display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
+            width: '100%',
+            gap: 4,
             position: 'relative',
             zIndex: 1,
+            flexDirection: { xs: 'column', lg: 'row' },
           }}
         >
-          {/* Back Button */}
-          <IconButton
-            onClick={() => navigate('/')}
+          {/* Left Side - Welcome Section */}
+          <Box
             sx={{
-              position: 'absolute',
-              top: -60,
-              left: 0,
+              flex: 1,
+              display: { xs: 'none', lg: 'flex' },
+              flexDirection: 'column',
+              justifyContent: 'center',
               color: 'white',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              },
+              pr: 4,
             }}
           >
-            <ArrowBackIcon />
-          </IconButton>
+            <Box sx={{ mb: 4 }}>
+              <LogoIcon fontSize={64} sx={{ mb: 2, filter: 'brightness(0) invert(1)' }} />
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 800,
+                  mb: 2,
+                  fontSize: { lg: '2.5rem', xl: '3rem' },
+                  lineHeight: 1.2,
+                }}
+              >
+                Welcome Back to HealthBridge
+              </Typography>
+              <Typography
+                variant="h6"
+                sx={{
+                  opacity: 0.9,
+                  fontWeight: 400,
+                  mb: 4,
+                  lineHeight: 1.6,
+                }}
+              >
+                Your trusted healthcare companion in Namibia. Access quality medical care, wellness programs, and health resources all in one place.
+              </Typography>
+            </Box>
+            <Stack spacing={2}>
+              {[
+                '24/7 Access to Healthcare Providers',
+                'Secure & Private Medical Records',
+                'Comprehensive Wellness Programs',
+              ].map((feature, index) => (
+                <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <CheckCircleIcon sx={{ fontSize: 24, opacity: 0.9 }} />
+                  <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                    {feature}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
 
-          <Paper
+          {/* Right Side - Login Form */}
+          <Box sx={{ flex: { xs: 1, lg: '0 0 480px' }, display: 'flex', alignItems: 'center' }}>
+            <Paper
             elevation={24}
             sx={{
               padding: { xs: 3, sm: 5 },
@@ -120,45 +155,34 @@ const Login: React.FC = () => {
               },
             }}
           >
-            <Box sx={{ textAlign: 'center', mb: 4 }}>
-              <Box
-                component="img"
-                src={logoPath}
-                alt="HealthBridge Logo"
-                onError={(e: any) => {
-                  e.target.style.display = 'none';
-                }}
-                sx={{
-                  height: 80,
-                  width: 'auto',
-                  objectFit: 'contain',
-                  mb: 2,
-                  mx: 'auto',
-                }}
-              />
-              <Typography
-                component="h1"
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  mb: 1,
-                }}
-              >
-                HealthBridge Namibia
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{
-                  color: '#64748b',
-                  fontWeight: 500,
-                }}
-              >
-                Sign in to your account
-              </Typography>
-            </Box>
+              <Box sx={{ textAlign: 'center', mb: 4, mt: { xs: 0, sm: 2 } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                  <LogoIcon fontSize={64} />
+                </Box>
+                <Typography
+                  component="h1"
+                  variant="h4"
+                  sx={{
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    mb: 1,
+                    fontSize: { xs: '1.75rem', sm: '2rem' },
+                  }}
+                >
+                  Welcome Back
+                </Typography>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: '#64748b',
+                    fontWeight: 400,
+                  }}
+                >
+                  Sign in to continue to HealthBridge
+                </Typography>
+              </Box>
             {error && (
               <Alert
                 severity="error"
@@ -171,108 +195,134 @@ const Login: React.FC = () => {
               </Alert>
             )}
             <Box component="form" onSubmit={handleSubmit}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Email Address"
-                name="email"
-                autoComplete="email"
-                autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <EmailIcon sx={{ color: '#94a3b8' }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  mb: 2,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    '&:hover fieldset': {
-                      borderColor: '#667eea',
+              <Stack spacing={2.5}>
+                <TextField
+                  required
+                  fullWidth
+                  id="email"
+                  label="Email Address"
+                  name="email"
+                  autoComplete="email"
+                  autoFocus
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <EmailIcon sx={{ color: '#94a3b8' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: '#f8fafc',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        backgroundColor: '#f1f5f9',
+                        '& fieldset': {
+                          borderColor: '#667eea',
+                        },
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: 'white',
+                        '& fieldset': {
+                          borderColor: '#667eea',
+                          borderWidth: 2,
+                        },
+                      },
                     },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#667eea',
+                  }}
+                />
+                <TextField
+                  required
+                  fullWidth
+                  name="password"
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LockIcon sx={{ color: '#94a3b8' }} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          size="small"
+                          sx={{ color: '#94a3b8' }}
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: '#f8fafc',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        backgroundColor: '#f1f5f9',
+                        '& fieldset': {
+                          borderColor: '#667eea',
+                        },
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: 'white',
+                        '& fieldset': {
+                          borderColor: '#667eea',
+                          borderWidth: 2,
+                        },
+                      },
                     },
-                  },
-                }}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LockIcon sx={{ color: '#94a3b8' }} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                        size="small"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  mb: 2,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    '&:hover fieldset': {
-                      borderColor: '#667eea',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#667eea',
-                    },
-                  },
-                }}
-              />
+                  }}
+                />
+              </Stack>
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
-                disabled={loading}
+                disabled={loading || !email || !password}
                 sx={{
                   mt: 3,
                   mb: 2,
-                  py: 1.5,
+                  py: 1.75,
                   borderRadius: 2,
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   fontSize: '1rem',
                   fontWeight: 600,
                   textTransform: 'none',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  boxShadow: '0 4px 14px 0 rgba(102, 126, 234, 0.39)',
+                  transition: 'all 0.3s ease',
                   '&:hover': {
                     background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)',
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                    transform: 'translateY(-1px)',
+                    boxShadow: '0 8px 20px 0 rgba(102, 126, 234, 0.5)',
+                    transform: 'translateY(-2px)',
                   },
                   '&:disabled': {
                     background: '#cbd5e1',
+                    boxShadow: 'none',
                   },
                 }}
               >
                 {loading ? 'Signing In...' : 'Sign In'}
               </Button>
-              <Box textAlign="center" sx={{ mt: 3 }}>
-                <Typography variant="body2" sx={{ color: '#64748b', mb: 1 }}>
+              
+              <Divider sx={{ my: 3 }}>
+                <Typography variant="body2" sx={{ color: '#94a3b8', px: 2 }}>
+                  OR
+                </Typography>
+              </Divider>
+
+              <Box textAlign="center">
+                <Typography variant="body2" sx={{ color: '#64748b', mb: 2 }}>
                   Don't have an account?{' '}
                   <Link
                     to="/register"
@@ -280,24 +330,31 @@ const Login: React.FC = () => {
                       color: '#667eea',
                       fontWeight: 600,
                       textDecoration: 'none',
+                      transition: 'color 0.2s',
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#5568d3')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = '#667eea')}
                   >
-                    Sign Up
+                    Create Account
                   </Link>
                 </Typography>
                 <Link
                   to="/"
                   style={{
-                    color: '#64748b',
+                    color: '#94a3b8',
                     textDecoration: 'none',
                     fontSize: '0.875rem',
+                    transition: 'color 0.2s',
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#64748b')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
                 >
                   ← Back to Home
                 </Link>
               </Box>
             </Box>
-          </Paper>
+            </Paper>
+          </Box>
         </Box>
       </Container>
     </Box>

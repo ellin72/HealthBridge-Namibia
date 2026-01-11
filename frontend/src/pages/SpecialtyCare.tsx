@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Container,
   Typography,
@@ -7,7 +7,6 @@ import {
   Card,
   CardContent,
   Grid,
-  Chip,
   Stack,
   Avatar,
 } from '@mui/material';
@@ -23,10 +22,8 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { useAuth } from '../contexts/AuthContext';
 
 const SpecialtyCare: React.FC = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const specialties = [

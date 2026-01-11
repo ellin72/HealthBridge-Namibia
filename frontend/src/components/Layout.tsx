@@ -9,8 +9,6 @@ import {
   Box,
   IconButton,
   Avatar,
-  Menu,
-  MenuItem,
   Collapse,
   Divider,
   InputBase,
@@ -19,13 +17,11 @@ import {
   alpha
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
   Dashboard as DashboardIcon,
   CalendarToday as CalendarIcon,
   FitnessCenter as FitnessIcon,
   School as SchoolIcon,
   Person as PersonIcon,
-  Logout as LogoutIcon,
   People as PeopleIcon,
   VideoCall as VideoCallIcon,
   Psychology as ResearchIcon,
@@ -44,14 +40,13 @@ import {
   Receipt as BillingIcon,
   Assessment as ClinicalIcon,
   Close as CloseIcon,
-  Emergency as EmergencyIcon,
+  MedicalServices as EmergencyIcon,
   Support as MentalHealthIcon,
   MonitorHeart as ChronicDiseaseIcon,
   LocalHospital as SpecialtyCareIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import LanguageSelector from './LanguageSelector';
 import GlobalNavBar from './GlobalNavBar';
 import TopNavigationBar from './TopNavigationBar';
 
@@ -77,12 +72,11 @@ interface MenuGroup {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<{ [key: string]: boolean }>({});
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const getMenuGroups = (): MenuGroup[] => {
     if (!user) return [];
@@ -325,19 +319,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
-  };
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
   };
 
   const handleNavigation = (path: string) => {
@@ -665,7 +646,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             height: { sm: 'calc(100vh - 64px)' },
             top: { sm: '64px' },
             left: 0,
-            zIndex: (theme) => theme.zIndex.drawer,
+            zIndex: (theme) => ({ xs: theme.zIndex.drawer + 10, sm: theme.zIndex.drawer }),
           }}
         >
           <Drawer
@@ -677,12 +658,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             }}
             sx={{
               display: { xs: 'block', sm: 'none' },
+              zIndex: (theme) => theme.zIndex.drawer + 10,
+              '& .MuiBackdrop-root': {
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                zIndex: (theme) => theme.zIndex.drawer + 9,
+              },
               '& .MuiDrawer-paper': {
                 boxSizing: 'border-box',
                 width: drawerWidth,
                 borderRight: '1px solid #e2e8f0',
                 backgroundColor: '#ffffff',
                 top: '64px',
+                height: 'calc(100vh - 64px)',
+                zIndex: (theme) => theme.zIndex.drawer + 10,
+                boxShadow: '4px 0 24px rgba(0, 0, 0, 0.15)',
               },
             }}
           >

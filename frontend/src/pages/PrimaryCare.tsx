@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Container,
   Typography,
@@ -7,7 +7,6 @@ import {
   Card,
   CardContent,
   Grid,
-  Avatar,
   Chip,
   Stack,
   Divider,
@@ -22,10 +21,8 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { useAuth } from '../contexts/AuthContext';
 
 const PrimaryCare: React.FC = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   return (

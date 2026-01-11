@@ -76,7 +76,7 @@ const GlobalNavBar: React.FC = () => {
           top: 0,
           backgroundColor: 'white',
           borderBottom: '1px solid #e2e8f0',
-          zIndex: (theme) => theme.zIndex.drawer + 1,
+          zIndex: (theme) => theme.zIndex.appBar - 1, // Lower than drawer
         }}
       >
         <Toolbar sx={{ px: 1, minHeight: '56px !important', overflowX: 'auto' }}>

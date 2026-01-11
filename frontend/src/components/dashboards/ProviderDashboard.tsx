@@ -7,7 +7,6 @@ import {
   Card,
   CardContent,
   Box,
-  CircularProgress,
   Avatar
 } from '@mui/material';
 import {

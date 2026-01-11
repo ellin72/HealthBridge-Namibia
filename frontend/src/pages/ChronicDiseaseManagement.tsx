@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Container,
   Typography,
@@ -9,7 +9,6 @@ import {
   Grid,
   Chip,
   Stack,
-  LinearProgress,
 } from '@mui/material';
 import {
   MonitorHeart as MonitorHeartIcon,
@@ -21,10 +20,8 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { useAuth } from '../contexts/AuthContext';
 
 const ChronicDiseaseManagement: React.FC = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const conditions = [

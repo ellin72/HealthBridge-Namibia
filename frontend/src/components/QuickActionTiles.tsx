@@ -5,15 +5,13 @@ import {
   Card,
   CardContent,
   Typography,
-  Box,
-  alpha
+  Box
 } from '@mui/material';
 import {
   CalendarToday as CalendarIcon,
   Healing as SymptomIcon,
   FitnessCenter as WellnessIcon,
   Receipt as BillingIcon,
-  Assignment as AssignmentIcon,
   School as LearningIcon,
   Psychology as ResearchIcon,
   Create as CreateIcon,

@@ -17,12 +17,12 @@ import {
   alpha,
   useTheme,
   useMediaQuery,
-  Container
+  Container,
+  Collapse
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Close as CloseIcon,
-  HealthAndSafety as HealthIcon,
   ArrowDropDown as ArrowDropDownIcon,
   Person as PersonIcon,
   Logout as LogoutIcon,
@@ -35,13 +35,16 @@ import {
   Psychology as MentalHealthIcon,
   MonitorHeart as ChronicDiseaseIcon,
   Healing as SpecialtyCareIcon,
-  Emergency as EmergencyIcon,
+  MedicalServices as EmergencyIcon,
   VideoCall as VideoCallIcon,
   Healing as SymptomIcon,
-  People as PeopleIcon
+  People as PeopleIcon,
+  ExpandMore,
+  ExpandLess
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import LanguageSelector from './LanguageSelector';
+import LogoIcon from './LogoIcon';
 
 const logoPath = '/healthbridge-logo.png';
 
@@ -60,6 +63,7 @@ const TopNavigationBar: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [anchorEls, setAnchorEls] = useState<{ [key: string]: HTMLElement | null }>({});
+  const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({});
 
   // Navigation structure similar to Teladoc
   const getNavItems = (): NavItem[] => {
@@ -212,6 +216,22 @@ const TopNavigationBar: React.FC = () => {
 
   const navItems = getNavItems();
 
+  // Auto-expand sections with active children
+  React.useEffect(() => {
+    const newExpanded: { [key: string]: boolean } = {};
+    
+    navItems.forEach((item) => {
+      if (item.children) {
+        const hasActiveChild = item.children.some(child => location.pathname === child.path);
+        if (hasActiveChild) {
+          newExpanded[item.label] = true;
+        }
+      }
+    });
+    
+    setExpandedSections(prev => ({ ...prev, ...newExpanded }));
+  }, [location.pathname, navItems]);
+
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, label: string) => {
     setAnchorEls({ ...anchorEls, [label]: event.currentTarget });
   };
@@ -224,6 +244,13 @@ const TopNavigationBar: React.FC = () => {
     navigate(path);
     setMobileMenuOpen(false);
     Object.keys(anchorEls).forEach(key => handleMenuClose(key));
+  };
+
+  const toggleSection = (label: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [label]: !prev[label]
+    }));
   };
 
   const handleLogout = () => {
@@ -251,7 +278,7 @@ const TopNavigationBar: React.FC = () => {
     <Box sx={{ width: 280, height: '100%' }}>
       <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <HealthIcon sx={{ fontSize: 28, color: '#2563eb' }} />
+          <LogoIcon fontSize={28} />
           <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.125rem' }}>
             HealthBridge
           </Typography>
@@ -261,45 +288,108 @@ const TopNavigationBar: React.FC = () => {
         </IconButton>
       </Box>
       <List sx={{ py: 2 }}>
-        {navItems.map((item) => (
-          <React.Fragment key={item.label}>
-            {item.children ? (
-              <>
-                <ListItem>
-                  <ListItemText
-                    primary={item.label}
-                    primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9375rem' }}
-                  />
-                </ListItem>
-                {item.children.map((child) => (
+        {navItems.map((item) => {
+          const isExpanded = expandedSections[item.label] ?? false;
+          const hasActiveChild = item.children?.some(child => location.pathname === child.path);
+          
+          return (
+            <React.Fragment key={item.label}>
+              {item.children ? (
+                <>
                   <ListItem
-                    key={child.label}
                     button
-                    onClick={() => child.path && handleNavigation(child.path)}
-                    sx={{ pl: 4 }}
+                    onClick={() => toggleSection(item.label)}
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: alpha('#2563eb', 0.05),
+                      },
+                    }}
                   >
                     <ListItemText
-                      primary={child.label}
-                      primaryTypographyProps={{ fontSize: '0.875rem', color: '#64748b' }}
+                      primary={item.label}
+                      primaryTypographyProps={{ 
+                        fontWeight: hasActiveChild ? 600 : 500, 
+                        fontSize: '0.9375rem',
+                        color: hasActiveChild ? '#2563eb' : '#1e293b'
+                      }}
                     />
+                    {isExpanded ? (
+                      <ExpandLess sx={{ color: '#64748b' }} />
+                    ) : (
+                      <ExpandMore sx={{ color: '#64748b' }} />
+                    )}
                   </ListItem>
-                ))}
-              </>
-            ) : (
-              <ListItem
-                button
-                onClick={() => item.path && handleNavigation(item.path)}
-                selected={location.pathname === item.path}
-              >
-                <ListItemText
-                  primary={item.label}
-                  primaryTypographyProps={{ fontWeight: location.pathname === item.path ? 600 : 500 }}
-                />
-              </ListItem>
-            )}
-            <Divider sx={{ my: 1 }} />
-          </React.Fragment>
-        ))}
+                  <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding>
+                      {item.children.map((child) => {
+                        const isChildActive = location.pathname === child.path;
+                        return (
+                          <ListItem
+                            key={child.label}
+                            button
+                            onClick={() => child.path && handleNavigation(child.path)}
+                            sx={{ 
+                              pl: 4,
+                              backgroundColor: isChildActive ? alpha('#2563eb', 0.08) : 'transparent',
+                              '&:hover': {
+                                backgroundColor: isChildActive ? alpha('#2563eb', 0.12) : alpha('#2563eb', 0.05),
+                              },
+                            }}
+                          >
+                            {child.icon && (
+                              <Box sx={{ mr: 1.5, display: 'flex', alignItems: 'center', color: isChildActive ? '#2563eb' : '#64748b' }}>
+                                {child.icon}
+                              </Box>
+                            )}
+                            <ListItemText
+                              primary={child.label}
+                              primaryTypographyProps={{ 
+                                fontSize: '0.875rem', 
+                                color: isChildActive ? '#2563eb' : '#64748b',
+                                fontWeight: isChildActive ? 600 : 400
+                              }}
+                            />
+                          </ListItem>
+                        );
+                      })}
+                    </List>
+                  </Collapse>
+                </>
+              ) : (
+                <ListItem
+                  button
+                  onClick={() => item.path && handleNavigation(item.path)}
+                  selected={location.pathname === item.path}
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: alpha('#2563eb', 0.05),
+                    },
+                    '&.Mui-selected': {
+                      backgroundColor: alpha('#2563eb', 0.1),
+                      '&:hover': {
+                        backgroundColor: alpha('#2563eb', 0.15),
+                      },
+                    },
+                  }}
+                >
+                  {item.icon && (
+                    <Box sx={{ mr: 1.5, display: 'flex', alignItems: 'center', color: location.pathname === item.path ? '#2563eb' : '#64748b' }}>
+                      {item.icon}
+                    </Box>
+                  )}
+                  <ListItemText
+                    primary={item.label}
+                    primaryTypographyProps={{ 
+                      fontWeight: location.pathname === item.path ? 600 : 500,
+                      color: location.pathname === item.path ? '#2563eb' : '#1e293b'
+                    }}
+                  />
+                </ListItem>
+              )}
+              <Divider sx={{ my: 1 }} />
+            </React.Fragment>
+          );
+        })}
         {user && (
           <>
             <ListItem button onClick={() => handleNavigation('/profile')}>
@@ -353,7 +443,10 @@ const TopNavigationBar: React.FC = () => {
                 display: { xs: 'none', sm: 'block' }
               }}
             />
-            <HealthIcon sx={{ fontSize: { xs: 28, sm: 32 }, color: '#2563eb', display: { sm: 'none' } }} />
+            <LogoIcon 
+              fontSize={{ xs: 28, sm: 32 }} 
+              sx={{ display: { sm: 'none' } }} 
+            />
             <Typography
               variant="h6"
               sx={{

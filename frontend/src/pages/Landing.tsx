@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Container,
@@ -8,39 +8,16 @@ import {
   Card,
   CardContent,
   CardMedia,
-  AppBar,
-  Toolbar,
   IconButton,
-  Drawer,
-  List,
-  ListItem,
-  ListItemText,
   Stack,
-  Chip,
   Avatar,
   Divider,
   Tabs,
   Tab,
-  useTheme,
-  useMediaQuery,
   alpha,
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
-  Close as CloseIcon,
-  HealthAndSafety as HealthIcon,
-  VideoCall as VideoCallIcon,
-  LocalHospital as HospitalIcon,
-  Psychology as MentalHealthIcon,
-  MonitorHeart as ChronicDiseaseIcon,
-  Healing as SpecialtyCareIcon,
-  FitnessCenter as WellnessIcon,
-  Person as PersonIcon,
-  School as SchoolIcon,
-  Business as BusinessIcon,
   ArrowForward as ArrowForwardIcon,
-  CheckCircle as CheckCircleIcon,
-  Star as StarIcon,
   PlayArrow as PlayIcon,
   Facebook as FacebookIcon,
   Twitter as TwitterIcon,
@@ -52,6 +29,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import TopNavigationBar from '../components/TopNavigationBar';
+import LogoIcon from '../components/LogoIcon';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -76,11 +54,7 @@ function TabPanel(props: TabPanelProps) {
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [tabValue, setTabValue] = useState(0);
-  const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
 
   const services = [
     {
@@ -187,14 +161,7 @@ const Landing: React.FC = () => {
     },
   ];
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentCarouselIndex((prev) => (prev + 1) % services.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [services.length]);
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -353,7 +320,7 @@ const Landing: React.FC = () => {
                         color: 'white',
                       }}
                     >
-                      <HealthIcon sx={{ fontSize: 40 }} />
+                      <LogoIcon fontSize={40} />
                     </Box>
                   </CardMedia>
                   <CardContent sx={{ p: 3 }}>
@@ -499,7 +466,7 @@ const Landing: React.FC = () => {
                       justifyContent: 'center',
                     }}
                   >
-                    <HealthIcon sx={{ fontSize: 120, color: '#667eea', opacity: 0.3 }} />
+                    <LogoIcon fontSize={120} sx={{ opacity: 0.3 }} />
                   </Box>
                 </Grid>
               </Grid>
@@ -723,7 +690,7 @@ const Landing: React.FC = () => {
           <Grid container spacing={4}>
             <Grid item xs={12} md={4}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-                <HealthIcon sx={{ fontSize: 32, color: '#667eea' }} />
+                <LogoIcon fontSize={32} />
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
                   HealthBridge Namibia
                 </Typography>

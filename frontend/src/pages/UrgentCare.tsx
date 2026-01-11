@@ -9,7 +9,6 @@ import {
   Grid,
   TextField,
   Alert,
-  Chip,
   Stack,
   Dialog,
   DialogTitle,
@@ -18,11 +17,10 @@ import {
   CircularProgress,
 } from '@mui/material';
 import {
-  Emergency as EmergencyIcon,
+  MedicalServices as EmergencyIcon,
   AccessTime as AccessTimeIcon,
   LocalHospital as HospitalIcon,
   Phone as PhoneIcon,
-  VideoCall as VideoCallIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import Layout from '../components/Layout';

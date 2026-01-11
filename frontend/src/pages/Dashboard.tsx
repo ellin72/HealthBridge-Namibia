@@ -1,5 +1,4 @@
 import React from 'react';
-import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import PatientDashboard from '../components/dashboards/PatientDashboard';
 import ProviderDashboard from '../components/dashboards/ProviderDashboard';
