@@ -18,6 +18,7 @@ import {
 import api from '../../services/authService';
 import { useAuth } from '../../contexts/AuthContext';
 import QuickActionTiles from '../QuickActionTiles';
+import NavigationGuide from '../NavigationGuide';
 
 const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -84,6 +85,9 @@ const StudentDashboard: React.FC = () => {
             Access learning resources, submit assignments, and use research tools
           </Typography>
         </Box>
+
+        {/* Navigation Guide */}
+        <NavigationGuide role="STUDENT" />
 
         {/* Quick Actions */}
         <QuickActionTiles role="STUDENT" />

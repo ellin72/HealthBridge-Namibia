@@ -22,6 +22,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import MedicationReminders from '../MedicationReminders';
 import RemoteMonitoring from '../RemoteMonitoring';
 import QuickActionTiles from '../QuickActionTiles';
+import NavigationGuide from '../NavigationGuide';
 
 const PatientDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -92,6 +93,9 @@ const PatientDashboard: React.FC = () => {
             Your HealthBridge dashboard - Book appointments, check symptoms, and manage your wellness
           </Typography>
         </Box>
+
+        {/* Navigation Guide */}
+        <NavigationGuide role="PATIENT" />
 
         {/* Quick Actions */}
         <QuickActionTiles role="PATIENT" />

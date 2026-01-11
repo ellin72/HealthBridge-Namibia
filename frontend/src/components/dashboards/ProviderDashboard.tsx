@@ -21,6 +21,7 @@ import BillingOverview from '../BillingOverview';
 import ClinicalTemplates from '../ClinicalTemplates';
 import RemoteMonitoring from '../RemoteMonitoring';
 import QuickActionTiles from '../QuickActionTiles';
+import NavigationGuide from '../NavigationGuide';
 
 const ProviderDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -89,6 +90,9 @@ const ProviderDashboard: React.FC = () => {
             Manage appointments, consultation notes, patient history, and track your earnings
           </Typography>
         </Box>
+
+        {/* Navigation Guide */}
+        <NavigationGuide role="HEALTHCARE_PROVIDER" />
 
         {/* Quick Actions */}
         <QuickActionTiles role="HEALTHCARE_PROVIDER" />

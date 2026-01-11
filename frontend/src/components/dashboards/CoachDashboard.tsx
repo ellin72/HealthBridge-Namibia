@@ -16,6 +16,7 @@ import {
 import api from '../../services/authService';
 import { useAuth } from '../../contexts/AuthContext';
 import QuickActionTiles from '../QuickActionTiles';
+import NavigationGuide from '../NavigationGuide';
 
 const CoachDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -71,6 +72,9 @@ const CoachDashboard: React.FC = () => {
             Create wellness content, launch challenges, and track engagement analytics
           </Typography>
         </Box>
+
+        {/* Navigation Guide */}
+        <NavigationGuide role="WELLNESS_COACH" />
 
         {/* Quick Actions */}
         <QuickActionTiles role="WELLNESS_COACH" />

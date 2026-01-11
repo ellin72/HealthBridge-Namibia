@@ -4,6 +4,8 @@
  */
 
 import { prisma } from './prisma';
+import { NotificationType } from '@prisma/client';
+import { createNotification } from '../controllers/notificationController';
 
 export interface ReceiptData {
   invoiceNumber: string;
@@ -219,5 +221,117 @@ function generateReceiptEmail(data: ReceiptData): string {
  */
 function generateReceiptSMS(data: ReceiptData): string {
   return `HealthBridge Receipt: ${data.receiptNumber}\nAmount: ${data.currency} ${data.total.toFixed(2)}\nPayment: ${data.paymentMethod}\nDate: ${data.paidDate.toLocaleDateString()}\nThank you!`;
+}
+
+/**
+ * Create in-app notification
+ */
+export async function createInAppNotification(
+  userId: string,
+  type: NotificationType,
+  title: string,
+  message: string,
+  link?: string,
+  metadata?: any
+): Promise<void> {
+  try {
+    await createNotification(userId, type, title, message, link, metadata);
+  } catch (error) {
+    console.error('Error creating in-app notification:', error);
+  }
+}
+
+/**
+ * Create appointment notification
+ */
+export async function notifyAppointmentCreated(
+  userId: string,
+  appointmentId: string,
+  providerName: string,
+  appointmentDate: Date
+): Promise<void> {
+  await createInAppNotification(
+    userId,
+    'APPOINTMENT',
+    'Appointment Scheduled',
+    `Your appointment with ${providerName} is scheduled for ${appointmentDate.toLocaleString()}`,
+    `/appointments/${appointmentId}`,
+    { appointmentId, providerName, appointmentDate: appointmentDate.toISOString() }
+  );
+}
+
+/**
+ * Create appointment reminder notification
+ */
+export async function notifyAppointmentReminder(
+  userId: string,
+  appointmentId: string,
+  providerName: string,
+  appointmentDate: Date
+): Promise<void> {
+  await createInAppNotification(
+    userId,
+    'APPOINTMENT_REMINDER',
+    'Appointment Reminder',
+    `Reminder: You have an appointment with ${providerName} in 24 hours`,
+    `/appointments/${appointmentId}`,
+    { appointmentId, providerName, appointmentDate: appointmentDate.toISOString() }
+  );
+}
+
+/**
+ * Create payment success notification
+ */
+export async function notifyPaymentSuccess(
+  userId: string,
+  amount: number,
+  currency: string,
+  invoiceId?: string
+): Promise<void> {
+  await createInAppNotification(
+    userId,
+    'PAYMENT_SUCCESS',
+    'Payment Successful',
+    `Your payment of ${currency} ${amount.toFixed(2)} has been processed successfully`,
+    invoiceId ? `/billing` : undefined,
+    { amount, currency, invoiceId }
+  );
+}
+
+/**
+ * Create prescription notification
+ */
+export async function notifyPrescriptionReady(
+  userId: string,
+  prescriptionId: string,
+  providerName: string
+): Promise<void> {
+  await createInAppNotification(
+    userId,
+    'PRESCRIPTION',
+    'New Prescription Available',
+    `Dr. ${providerName} has prescribed new medication for you`,
+    `/prescriptions/${prescriptionId}`,
+    { prescriptionId, providerName }
+  );
+}
+
+/**
+ * Create assignment graded notification
+ */
+export async function notifyAssignmentGraded(
+  userId: string,
+  assignmentId: string,
+  grade: number,
+  assignmentTitle: string
+): Promise<void> {
+  await createInAppNotification(
+    userId,
+    'ASSIGNMENT_GRADED',
+    'Assignment Graded',
+    `Your assignment "${assignmentTitle}" has been graded: ${grade}%`,
+    `/learning/assignments/${assignmentId}`,
+    { assignmentId, grade, assignmentTitle }
+  );
 }
 

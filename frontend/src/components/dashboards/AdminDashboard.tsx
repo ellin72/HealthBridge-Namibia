@@ -17,6 +17,7 @@ import {
 import api from '../../services/authService';
 import { useAuth } from '../../contexts/AuthContext';
 import QuickActionTiles from '../QuickActionTiles';
+import NavigationGuide from '../NavigationGuide';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -72,6 +73,9 @@ const AdminDashboard: React.FC = () => {
             System administration - Manage users, monitor system health, and detect fraud
           </Typography>
         </Box>
+
+        {/* Navigation Guide */}
+        <NavigationGuide role="ADMIN" />
 
         {/* Quick Actions */}
         <QuickActionTiles role="ADMIN" />

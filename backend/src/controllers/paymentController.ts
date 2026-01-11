@@ -6,7 +6,7 @@ import { paymentGateway } from '../utils/paymentGateway';
 import { analyzePaymentForFraud, logFraudCheck } from '../utils/fraudDetection';
 import { is2FAEnabled, verify2FAToken } from '../utils/twoFactorAuth';
 import { encryptCardToken, maskCardNumber } from '../utils/financialEncryption';
-import { sendPaymentConfirmation, sendReceiptEmail, sendReceiptSMS } from '../utils/notificationService';
+import { sendPaymentConfirmation, sendReceiptEmail, sendReceiptSMS, notifyPaymentSuccess } from '../utils/notificationService';
 import { generateReceipt } from '../utils/receiptGenerator';
 import { 
   storePendingCallback, 
@@ -386,6 +386,14 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
       // Generate receipt
       const receipt = await generateReceipt(invoice, payment);
       
+      // Create in-app notification
+      await notifyPaymentSuccess(
+        payment.userId,
+        payment.amount,
+        payment.currency,
+        invoice.id
+      );
+      
       // Send notifications
       await sendReceiptEmail({
         invoiceNumber: invoice.invoiceNumber,
@@ -425,6 +433,16 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
           paidDate: payment.completedAt || new Date()
         });
       }
+    }
+
+    // Create in-app notification for successful payment
+    if (payment.status === 'COMPLETED' && payment.completedAt) {
+      await notifyPaymentSuccess(
+        payment.userId,
+        payment.amount,
+        payment.currency,
+        payment.invoiceId || undefined
+      );
     }
 
     // Send payment confirmation

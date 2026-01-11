@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { AppointmentStatus } from '@prisma/client';
 import { prisma } from '../utils/prisma';
+import { notifyAppointmentCreated } from '../utils/notificationService';
 
 export const createAppointment = async (req: AuthRequest, res: Response) => {
   try {
@@ -50,6 +51,22 @@ export const createAppointment = async (req: AuthRequest, res: Response) => {
         }
       }
     });
+
+    // Create notification for patient
+    await notifyAppointmentCreated(
+      appointment.patientId,
+      appointment.id,
+      `Dr. ${appointment.provider.firstName} ${appointment.provider.lastName}`,
+      appointment.appointmentDate
+    );
+
+    // Create notification for provider
+    await notifyAppointmentCreated(
+      appointment.providerId,
+      appointment.id,
+      `${appointment.patient.firstName} ${appointment.patient.lastName}`,
+      appointment.appointmentDate
+    );
 
     // Get provider fee settings
     let providerFee = await prisma.providerFee.findUnique({

@@ -20,6 +20,7 @@ import {
   Settings as SettingsIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationDropdown from './NotificationDropdown';
 
 const GlobalNavBar: React.FC = () => {
   const navigate = useNavigate();
@@ -109,6 +110,7 @@ const GlobalNavBar: React.FC = () => {
                 </Button>
               );
             })}
+            <NotificationDropdown />
             <Button
               onClick={() => navigate('/profile')}
               startIcon={<SettingsIcon />}
@@ -179,24 +181,7 @@ const GlobalNavBar: React.FC = () => {
           })}
         </Box>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <Button
-            startIcon={<NotificationsIcon />}
-            sx={{
-              minWidth: 'auto',
-              px: 2,
-              py: 1,
-              borderRadius: 2,
-              textTransform: 'none',
-              color: '#64748b',
-              '&:hover': {
-                backgroundColor: alpha('#2563eb', 0.05),
-              },
-            }}
-          >
-            <Badge badgeContent={0} color="error">
-              Notifications
-            </Badge>
-          </Button>
+          <NotificationDropdown />
           <Button
             onClick={() => navigate('/profile')}
             startIcon={<SettingsIcon />}

@@ -38,6 +38,7 @@ import hypertensionManagementRoutes from './routes/hypertensionManagement';
 import specialtyWellnessRoutes from './routes/specialtyWellness';
 import primaryCareRoutes from './routes/primaryCare';
 import urgentCareRoutes from './routes/urgentCare';
+import notificationRoutes from './routes/notifications';
 import { apiMonitoring } from './middleware/apiMonitoring';
 
 // Load environment variables
@@ -135,6 +136,7 @@ app.use('/api/hypertension-management', hypertensionManagementRoutes);
 app.use('/api/specialty-wellness', specialtyWellnessRoutes);
 app.use('/api/primary-care', primaryCareRoutes);
 app.use('/api/urgent-care', urgentCareRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
