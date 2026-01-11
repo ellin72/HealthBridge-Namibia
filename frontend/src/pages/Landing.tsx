@@ -51,6 +51,7 @@ import {
   LocationOn as LocationIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import TopNavigationBar from '../components/TopNavigationBar';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -199,63 +200,8 @@ const Landing: React.FC = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#ffffff' }}>
-      {/* Header */}
-      <AppBar
-        position="sticky"
-        elevation={0}
-        sx={{
-          backgroundColor: 'white',
-          color: '#1e293b',
-          borderBottom: '1px solid #f1f5f9',
-        }}
-      >
-        <Container maxWidth="xl">
-          <Toolbar sx={{ justifyContent: 'space-between', py: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <HealthIcon sx={{ fontSize: 32, color: '#667eea' }} />
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 700,
-                  fontSize: '1.25rem',
-                  color: '#1e293b',
-                }}
-              >
-                HealthBridge Namibia
-              </Typography>
-            </Box>
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 3 }}>
-              <Button
-                color="inherit"
-                onClick={() => navigate('/login')}
-                sx={{ fontWeight: 500, color: '#64748b' }}
-              >
-                Sign In
-              </Button>
-              <Button
-                variant="contained"
-                onClick={() => navigate('/register')}
-                sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  fontWeight: 600,
-                  px: 3,
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)',
-                  },
-                }}
-              >
-                Get Started
-              </Button>
-            </Box>
-            <IconButton
-              sx={{ display: { xs: 'flex', md: 'none' }, color: '#1e293b' }}
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
-            </IconButton>
-          </Toolbar>
-        </Container>
-      </AppBar>
+      {/* Top Navigation Bar (Teladoc-style) */}
+      <TopNavigationBar />
 
       {/* Hero Section */}
       <Box

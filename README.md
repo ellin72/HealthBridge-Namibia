@@ -495,6 +495,7 @@ HealthBridge-Namibia/
 
 ## Documentation
 
+- **[PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)** - ⭐ **Complete project documentation with all improvements and changes**
 - **[startup.md](./startup.md)** - Step-by-step startup guide for new developers ⭐ **Start here!**
 - **[docs/SETUP_GUIDE.md](./docs/SETUP_GUIDE.md)** - Complete setup and configuration guide
 - **[docs/API_DOCUMENTATION.md](./docs/API_DOCUMENTATION.md)** - API endpoints and usage

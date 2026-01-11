@@ -1,7 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import {
-  AppBar,
-  Toolbar,
   Typography,
   Drawer,
   List,
@@ -55,6 +53,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import LanguageSelector from './LanguageSelector';
 import GlobalNavBar from './GlobalNavBar';
+import TopNavigationBar from './TopNavigationBar';
 
 const logoPath = '/healthbridge-logo.png';
 const drawerWidth = 280;
@@ -652,201 +651,78 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   );
 
   return (
-    <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        elevation={0}
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          backgroundColor: 'white',
-          color: '#1e293b',
-          borderBottom: '1px solid #e2e8f0',
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-        }}
-      >
-        <Toolbar sx={{ minHeight: '72px !important', px: { xs: 2, sm: 3 } }}>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {/* Top Navigation Bar (Teladoc-style) */}
+      <TopNavigationBar />
+      
+      <Box sx={{ display: 'flex', flex: 1, mt: '64px' }}>
+        <Box
+          component="nav"
+          sx={{
+            width: { sm: drawerWidth },
+            flexShrink: { sm: 0 },
+            position: { sm: 'fixed' },
+            height: { sm: 'calc(100vh - 64px)' },
+            top: { sm: '64px' },
+            left: 0,
+            zIndex: (theme) => theme.zIndex.drawer,
+          }}
+        >
+          <Drawer
+            variant="temporary"
+            open={mobileOpen}
+            onClose={handleDrawerToggle}
+            ModalProps={{
+              keepMounted: true,
+            }}
             sx={{
-              mr: 2,
-              display: { sm: 'none' },
-              color: '#64748b',
-              '&:hover': {
-                backgroundColor: alpha('#2563eb', 0.08),
+              display: { xs: 'block', sm: 'none' },
+              '& .MuiDrawer-paper': {
+                boxSizing: 'border-box',
+                width: drawerWidth,
+                borderRight: '1px solid #e2e8f0',
+                backgroundColor: '#ffffff',
+                top: '64px',
               },
             }}
           >
-            <MenuIcon />
-          </IconButton>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
-            <Typography
-              variant="h6"
-              noWrap
-              component="div"
-              sx={{
-                fontWeight: 600,
-                color: '#1e293b',
-                fontSize: '1.25rem',
-                display: { xs: 'none', md: 'block' },
-              }}
-            >
-              {location.pathname === '/dashboard'
-                ? 'Dashboard'
-                : location.pathname
-                    .split('/')
-                    .pop()
-                    ?.split('-')
-                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' ') || 'HealthBridge'}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <LanguageSelector />
-            <IconButton
-              onClick={handleMenuClick}
-              sx={{
-                '&:hover': {
-                  backgroundColor: alpha('#2563eb', 0.08),
-                },
-              }}
-            >
-              <Avatar
-                sx={{
-                  width: 40,
-                  height: 40,
-                  background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
-                  fontWeight: 600,
-                  fontSize: '0.875rem',
-                }}
-              >
-                {user?.firstName?.[0]}{user?.lastName?.[0]}
-              </Avatar>
-            </IconButton>
-            <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={handleMenuClose}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right',
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              PaperProps={{
-                elevation: 4,
-                sx: {
-                  mt: 1.5,
-                  borderRadius: 2,
-                  minWidth: 200,
-                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                },
-              }}
-            >
-              <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid #e2e8f0' }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                  {user?.firstName} {user?.lastName}
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#64748b', textTransform: 'capitalize' }}>
-                  {user?.role?.toLowerCase().replace('_', ' ')}
-                </Typography>
-              </Box>
-              <MenuItem
-                onClick={() => {
-                  navigate('/profile');
-                  handleMenuClose();
-                }}
-                sx={{
-                  py: 1.5,
-                  '&:hover': {
-                    backgroundColor: alpha('#2563eb', 0.08),
-                  },
-                }}
-              >
-                <PersonIcon sx={{ mr: 1.5, fontSize: 20, color: '#64748b' }} />
-                <Typography variant="body2">Profile</Typography>
-              </MenuItem>
-              <MenuItem
-                onClick={handleLogout}
-                sx={{
-                  py: 1.5,
-                  '&:hover': {
-                    backgroundColor: alpha('#ef4444', 0.08),
-                  },
-                }}
-              >
-                <LogoutIcon sx={{ mr: 1.5, fontSize: 20, color: '#ef4444' }} />
-                <Typography variant="body2" sx={{ color: '#ef4444' }}>
-                  Logout
-                </Typography>
-              </MenuItem>
-            </Menu>
-          </Box>
-        </Toolbar>
-      </AppBar>
-      <Box
-        component="nav"
-        sx={{
-          width: { sm: drawerWidth },
-          flexShrink: { sm: 0 },
-        }}
-      >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true,
-          }}
+            {drawer}
+          </Drawer>
+          <Drawer
+            variant="permanent"
+            sx={{
+              display: { xs: 'none', sm: 'block' },
+              '& .MuiDrawer-paper': {
+                boxSizing: 'border-box',
+                width: drawerWidth,
+                borderRight: '1px solid #e2e8f0',
+                backgroundColor: '#ffffff',
+                overflow: 'hidden',
+                top: '64px',
+                height: 'calc(100vh - 64px)',
+              },
+            }}
+            open
+          >
+            {drawer}
+          </Drawer>
+        </Box>
+        <Box
+          component="main"
           sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-              borderRight: '1px solid #e2e8f0',
-              backgroundColor: '#ffffff',
-            },
+            flexGrow: 1,
+            width: { sm: `calc(100% - ${drawerWidth}px)` },
+            ml: { sm: `${drawerWidth}px` },
+            backgroundColor: '#f8fafc',
+            minHeight: 'calc(100vh - 64px)',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-              borderRight: '1px solid #e2e8f0',
-              backgroundColor: '#ffffff',
-              overflow: 'hidden',
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          backgroundColor: '#f8fafc',
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <Toolbar />
-        <GlobalNavBar />
-        <Box sx={{ flex: 1, p: { xs: 2, sm: 3 } }}>
-          <Box sx={{ maxWidth: '1400px', mx: 'auto' }}>{children}</Box>
+          <GlobalNavBar />
+          <Box sx={{ flex: 1, p: { xs: 2, sm: 3 } }}>
+            <Box sx={{ maxWidth: '1400px', mx: 'auto' }}>{children}</Box>
+          </Box>
         </Box>
       </Box>
     </Box>
