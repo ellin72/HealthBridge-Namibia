@@ -19,6 +19,13 @@ async function makeRequest(method, url, data = null, token = null, options = {})
     expectedStatusArray = null // Support array of acceptable statuses
   } = options;
 
+  // Handle both expectedStatus as array and expectedStatusArray parameter
+  // If expectedStatus is an array, use it; otherwise use expectedStatusArray if provided
+  const statusArray = Array.isArray(expectedStatus) 
+    ? expectedStatus 
+    : (expectedStatusArray || null);
+  const statusValue = Array.isArray(expectedStatus) ? null : expectedStatus;
+
   try {
     const config = {
       method,
@@ -34,9 +41,9 @@ async function makeRequest(method, url, data = null, token = null, options = {})
     };
 
     const response = await axios(config);
-    const isExpected = Array.isArray(expectedStatusArray) 
-      ? expectedStatusArray.includes(response.status)
-      : response.status === expectedStatus;
+    const isExpected = statusArray
+      ? statusArray.includes(response.status)
+      : response.status === statusValue;
     
     return {
       success: isExpected,
@@ -56,9 +63,9 @@ async function makeRequest(method, url, data = null, token = null, options = {})
     }
     
     const status = error.response?.status || 500;
-    const isExpected = Array.isArray(expectedStatusArray)
-      ? expectedStatusArray.includes(status)
-      : status === expectedStatus;
+    const isExpected = statusArray
+      ? statusArray.includes(status)
+      : status === statusValue;
     
     return {
       success: isExpected,

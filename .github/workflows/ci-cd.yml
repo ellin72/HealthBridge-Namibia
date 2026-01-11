@@ -76,8 +76,9 @@ jobs:
         run: |
           cd backend
           export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
-          # Check if migrations directory exists and has migration files
-          if [ -d "prisma/migrations" ] && [ "$(ls -A prisma/migrations 2>/dev/null | grep -v '^\.')" ]; then
+          # Check if migrations directory exists and has migration directories
+          # Prisma migrations are directories (e.g., 20240101000000_migration_name/)
+          if [ -d "prisma/migrations" ] && [ -n "$(find prisma/migrations -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -1)" ]; then
             echo "📦 Migration files found, running migrate deploy..."
             npx prisma migrate deploy || {
               echo "❌ Migration deploy failed. This indicates a real error (connection, syntax, conflicts)."
@@ -180,8 +181,9 @@ jobs:
           cd backend
           export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
           echo "Running database migrations..."
-          # Check if migrations directory exists and has migration files
-          if [ -d "prisma/migrations" ] && [ "$(ls -A prisma/migrations 2>/dev/null | grep -v '^\.')" ]; then
+          # Check if migrations directory exists and has migration directories
+          # Prisma migrations are directories (e.g., 20240101000000_migration_name/)
+          if [ -d "prisma/migrations" ] && [ -n "$(find prisma/migrations -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -1)" ]; then
             echo "📦 Migration files found, running migrate deploy..."
             npx prisma migrate deploy || {
               echo "❌ Migration deploy failed. This indicates a real error (connection, syntax, conflicts)."
