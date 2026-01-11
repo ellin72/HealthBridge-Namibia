@@ -30,6 +30,11 @@ import MedicalAid from './pages/MedicalAid';
 import Payments from './pages/Payments';
 import Monitoring from './pages/Monitoring';
 import ProviderEarnings from './pages/ProviderEarnings';
+import UrgentCare from './pages/UrgentCare';
+import PrimaryCare from './pages/PrimaryCare';
+import MentalHealth from './pages/MentalHealth';
+import ChronicDiseaseManagement from './pages/ChronicDiseaseManagement';
+import SpecialtyCare from './pages/SpecialtyCare';
 
 const theme = createTheme({
   palette: {
@@ -362,6 +367,46 @@ function App() {
               element={
                 <PrivateRoute>
                   <ProviderEarnings />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/urgent-care"
+              element={
+                <PrivateRoute>
+                  <UrgentCare />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/primary-care"
+              element={
+                <PrivateRoute>
+                  <PrimaryCare />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/mental-health"
+              element={
+                <PrivateRoute>
+                  <MentalHealth />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/chronic-disease-management"
+              element={
+                <PrivateRoute>
+                  <ChronicDiseaseManagement />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/specialty-care"
+              element={
+                <PrivateRoute>
+                  <SpecialtyCare />
                 </PrivateRoute>
               }
             />

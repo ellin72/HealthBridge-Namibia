@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -12,7 +12,13 @@ import {
   IconButton,
   Avatar,
   Menu,
-  MenuItem
+  MenuItem,
+  Collapse,
+  Divider,
+  InputBase,
+  Paper,
+  Chip,
+  alpha
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -24,7 +30,6 @@ import {
   Logout as LogoutIcon,
   People as PeopleIcon,
   VideoCall as VideoCallIcon,
-  TrackChanges as TrackIcon,
   Psychology as ResearchIcon,
   LocalPharmacy as PharmacyIcon,
   Assignment as SurveyIcon,
@@ -32,112 +37,291 @@ import {
   LocalHospital as MedicalAidIcon,
   Payment as PaymentIcon,
   MonitorHeart as MonitorIcon,
-  AttachMoney as EarningsIcon
+  AttachMoney as EarningsIcon,
+  Search as SearchIcon,
+  ExpandLess,
+  ExpandMore,
+  Healing as SymptomIcon,
+  Spa as WellnessToolsIcon,
+  Receipt as BillingIcon,
+  Assessment as ClinicalIcon,
+  Close as CloseIcon,
+  Emergency as EmergencyIcon,
+  Support as MentalHealthIcon,
+  MonitorHeart as ChronicDiseaseIcon,
+  LocalHospital as SpecialtyCareIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import LanguageSelector from './LanguageSelector';
 
-// Import logo - update path based on your actual logo file name
-// For Vite, you can use: import logoPath from '../assets/images/healthbridge-logo.png';
-// Or use public folder: const logoPath = '/healthbridge-logo.png';
-const logoPath = '/healthbridge-logo.png'; // Place logo in public folder, or use import above
-
-const drawerWidth = 240;
+const logoPath = '/healthbridge-logo.png';
+const drawerWidth = 280;
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
+interface MenuItem {
+  text: string;
+  icon: React.ReactNode;
+  path: string;
+  badge?: string;
+}
+
+interface MenuGroup {
+  title: string;
+  items: MenuItem[];
+  defaultOpen?: boolean;
+}
+
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedGroups, setExpandedGroups] = useState<{ [key: string]: boolean }>({});
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
 
-  const getMenuItems = () => {
+  const getMenuGroups = (): MenuGroup[] => {
     if (!user) return [];
 
-    const baseItems = [
-      { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    const baseGroups: MenuGroup[] = [
+      {
+        title: 'Overview',
+        items: [{ text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' }],
+        defaultOpen: true,
+      },
     ];
 
-    // PATIENT menu items
+    // PATIENT menu groups
     if (user.role === 'PATIENT') {
       return [
-        ...baseItems,
-        { text: 'Choose Provider', icon: <PeopleIcon />, path: '/select-provider' },
-        { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
-        { text: 'Prescriptions', icon: <PharmacyIcon />, path: '/prescriptions' },
-        { text: 'Telehealth Pro', icon: <VideoCallIcon />, path: '/telehealth-pro' },
-        { text: 'Symptom Checker', icon: <TrackIcon />, path: '/symptom-checker' },
-        { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
-        { text: 'Wellness Tools', icon: <TrackIcon />, path: '/wellness-tools' },
-        { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
-        { text: 'Medical Aid', icon: <MedicalAidIcon />, path: '/medical-aid' },
-        { text: 'Payments', icon: <PaymentIcon />, path: '/payments' },
-        { text: 'Surveys', icon: <SurveyIcon />, path: '/surveys' },
-        { text: 'Policies', icon: <PolicyIcon />, path: '/policies' },
+        ...baseGroups,
+        {
+          title: 'Healthcare',
+          items: [
+            { text: 'Choose Provider', icon: <PeopleIcon />, path: '/select-provider' },
+            { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
+            { text: 'Urgent Care', icon: <EmergencyIcon />, path: '/urgent-care' },
+            { text: 'Primary Care', icon: <PersonIcon />, path: '/primary-care' },
+            { text: 'Telehealth Pro', icon: <VideoCallIcon />, path: '/telehealth-pro' },
+            { text: 'Prescriptions', icon: <PharmacyIcon />, path: '/prescriptions' },
+            { text: 'Symptom Checker', icon: <SymptomIcon />, path: '/symptom-checker' },
+          ],
+          defaultOpen: true,
+        },
+        {
+          title: 'Specialty Services',
+          items: [
+            { text: 'Mental Health', icon: <MentalHealthIcon />, path: '/mental-health' },
+            { text: 'Chronic Disease', icon: <ChronicDiseaseIcon />, path: '/chronic-disease-management' },
+            { text: 'Specialty Care', icon: <SpecialtyCareIcon />, path: '/specialty-care' },
+          ],
+          defaultOpen: false,
+        },
+        {
+          title: 'Wellness',
+          items: [
+            { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
+            { text: 'Wellness Tools', icon: <WellnessToolsIcon />, path: '/wellness-tools' },
+          ],
+          defaultOpen: false,
+        },
+        {
+          title: 'Learning',
+          items: [{ text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' }],
+          defaultOpen: false,
+        },
+        {
+          title: 'Financial',
+          items: [
+            { text: 'Medical Aid', icon: <MedicalAidIcon />, path: '/medical-aid' },
+            { text: 'Payments', icon: <PaymentIcon />, path: '/payments' },
+          ],
+          defaultOpen: false,
+        },
+        {
+          title: 'Administrative',
+          items: [
+            { text: 'Surveys', icon: <SurveyIcon />, path: '/surveys' },
+            { text: 'Policies', icon: <PolicyIcon />, path: '/policies' },
+          ],
+          defaultOpen: false,
+        },
       ];
     }
 
-    // HEALTHCARE_PROVIDER menu items
+    // HEALTHCARE_PROVIDER menu groups
     if (user.role === 'HEALTHCARE_PROVIDER') {
       return [
-        ...baseItems,
-        { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
-        { text: 'Telehealth Pro', icon: <VideoCallIcon />, path: '/telehealth-pro' },
-        { text: 'Clinical Templates', icon: <TrackIcon />, path: '/clinical-templates' },
-        { text: 'Billing', icon: <CalendarIcon />, path: '/billing' },
-        { text: 'Provider Earnings', icon: <EarningsIcon />, path: '/provider-earnings' },
-        { text: 'Monitoring', icon: <MonitorIcon />, path: '/monitoring' },
-        { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
-        { text: 'Surveys', icon: <SurveyIcon />, path: '/surveys' },
-        { text: 'Policies', icon: <PolicyIcon />, path: '/policies' },
+        ...baseGroups,
+        {
+          title: 'Clinical',
+          items: [
+            { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
+            { text: 'Urgent Care', icon: <EmergencyIcon />, path: '/urgent-care' },
+            { text: 'Primary Care', icon: <PersonIcon />, path: '/primary-care' },
+            { text: 'Telehealth Pro', icon: <VideoCallIcon />, path: '/telehealth-pro' },
+            { text: 'Clinical Templates', icon: <ClinicalIcon />, path: '/clinical-templates' },
+            { text: 'Monitoring', icon: <MonitorIcon />, path: '/monitoring' },
+          ],
+          defaultOpen: true,
+        },
+        {
+          title: 'Specialty Services',
+          items: [
+            { text: 'Mental Health', icon: <MentalHealthIcon />, path: '/mental-health' },
+            { text: 'Chronic Disease', icon: <ChronicDiseaseIcon />, path: '/chronic-disease-management' },
+            { text: 'Specialty Care', icon: <SpecialtyCareIcon />, path: '/specialty-care' },
+          ],
+          defaultOpen: false,
+        },
+        {
+          title: 'Financial',
+          items: [
+            { text: 'Billing', icon: <BillingIcon />, path: '/billing' },
+            { text: 'Provider Earnings', icon: <EarningsIcon />, path: '/provider-earnings' },
+          ],
+          defaultOpen: false,
+        },
+        {
+          title: 'Learning',
+          items: [{ text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' }],
+          defaultOpen: false,
+        },
+        {
+          title: 'Administrative',
+          items: [
+            { text: 'Surveys', icon: <SurveyIcon />, path: '/surveys' },
+            { text: 'Policies', icon: <PolicyIcon />, path: '/policies' },
+          ],
+          defaultOpen: false,
+        },
       ];
     }
 
-    // WELLNESS_COACH menu items
+    // WELLNESS_COACH menu groups
     if (user.role === 'WELLNESS_COACH') {
       return [
-        ...baseItems,
-        { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
-        { text: 'Wellness Tools', icon: <TrackIcon />, path: '/wellness-tools' },
+        ...baseGroups,
+        {
+          title: 'Wellness',
+          items: [
+            { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
+            { text: 'Wellness Tools', icon: <WellnessToolsIcon />, path: '/wellness-tools' },
+          ],
+          defaultOpen: true,
+        },
       ];
     }
 
-    // STUDENT menu items
+    // STUDENT menu groups
     if (user.role === 'STUDENT') {
       return [
-        ...baseItems,
-        { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
-        { text: 'Research Support', icon: <ResearchIcon />, path: '/research' },
+        ...baseGroups,
+        {
+          title: 'Learning',
+          items: [
+            { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
+            { text: 'Research Support', icon: <ResearchIcon />, path: '/research' },
+          ],
+          defaultOpen: true,
+        },
       ];
     }
 
-    // ADMIN menu items (full access)
+    // ADMIN menu groups (full access)
     if (user.role === 'ADMIN') {
       return [
-        ...baseItems,
-        { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
-        { text: 'Telehealth Pro', icon: <VideoCallIcon />, path: '/telehealth-pro' },
-        { text: 'Symptom Checker', icon: <TrackIcon />, path: '/symptom-checker' },
-        { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
-        { text: 'Wellness Tools', icon: <TrackIcon />, path: '/wellness-tools' },
-        { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
-        { text: 'Research Support', icon: <ResearchIcon />, path: '/research' },
-        { text: 'User Management', icon: <PeopleIcon />, path: '/users' },
-        { text: 'Surveys', icon: <SurveyIcon />, path: '/surveys' },
-        { text: 'Policies', icon: <PolicyIcon />, path: '/policies' },
-        { text: 'Monitoring', icon: <MonitorIcon />, path: '/monitoring' },
+        ...baseGroups,
+        {
+          title: 'Healthcare',
+          items: [
+            { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
+            { text: 'Urgent Care', icon: <EmergencyIcon />, path: '/urgent-care' },
+            { text: 'Primary Care', icon: <PersonIcon />, path: '/primary-care' },
+            { text: 'Telehealth Pro', icon: <VideoCallIcon />, path: '/telehealth-pro' },
+            { text: 'Symptom Checker', icon: <SymptomIcon />, path: '/symptom-checker' },
+          ],
+          defaultOpen: false,
+        },
+        {
+          title: 'Specialty Services',
+          items: [
+            { text: 'Mental Health', icon: <MentalHealthIcon />, path: '/mental-health' },
+            { text: 'Chronic Disease', icon: <ChronicDiseaseIcon />, path: '/chronic-disease-management' },
+            { text: 'Specialty Care', icon: <SpecialtyCareIcon />, path: '/specialty-care' },
+          ],
+          defaultOpen: false,
+        },
+        {
+          title: 'Wellness',
+          items: [
+            { text: 'Wellness Hub', icon: <FitnessIcon />, path: '/wellness' },
+            { text: 'Wellness Tools', icon: <WellnessToolsIcon />, path: '/wellness-tools' },
+          ],
+          defaultOpen: false,
+        },
+        {
+          title: 'Learning',
+          items: [
+            { text: 'Learning Zone', icon: <SchoolIcon />, path: '/learning' },
+            { text: 'Research Support', icon: <ResearchIcon />, path: '/research' },
+          ],
+          defaultOpen: false,
+        },
+        {
+          title: 'Administration',
+          items: [
+            { text: 'User Management', icon: <PeopleIcon />, path: '/users' },
+            { text: 'Monitoring', icon: <MonitorIcon />, path: '/monitoring' },
+            { text: 'Surveys', icon: <SurveyIcon />, path: '/surveys' },
+            { text: 'Policies', icon: <PolicyIcon />, path: '/policies' },
+          ],
+          defaultOpen: false,
+        },
       ];
     }
 
-    return baseItems;
+    return baseGroups;
   };
 
-  const menuItems = getMenuItems();
+  const menuGroups = useMemo(() => getMenuGroups(), [user]);
+
+  // Initialize expanded groups
+  React.useEffect(() => {
+    const initialExpanded: { [key: string]: boolean } = {};
+    menuGroups.forEach((group) => {
+      initialExpanded[group.title] = group.defaultOpen ?? false;
+    });
+    setExpandedGroups(initialExpanded);
+  }, [user]);
+
+  // Filter menu items based on search
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) return menuGroups;
+
+    const query = searchQuery.toLowerCase();
+    return menuGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter(
+          (item) =>
+            item.text.toLowerCase().includes(query) ||
+            item.path.toLowerCase().includes(query)
+        ),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [menuGroups, searchQuery]);
+
+  const toggleGroup = (title: string) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [title]: !prev[title],
+    }));
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -156,16 +340,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate('/');
   };
 
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setMobileOpen(false);
+  };
+
   const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Header */}
+      <Box
         sx={{
           background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
           color: 'white',
-          minHeight: '64px !important',
+          p: 2,
           display: 'flex',
           alignItems: 'center',
-          gap: 2,
+          gap: 1.5,
+          minHeight: 72,
         }}
       >
         <Box
@@ -173,7 +364,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           src={logoPath}
           alt="HealthBridge Logo"
           onError={(e: any) => {
-            // Fallback if image doesn't load
             e.target.style.display = 'none';
           }}
           sx={{
@@ -182,60 +372,280 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             objectFit: 'contain',
           }}
         />
-        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, fontSize: '1.25rem' }}>
-          HealthBridge
-        </Typography>
-      </Toolbar>
-      <Box sx={{ flex: 1, pt: 2 }}>
-        <List>
-          {menuItems.map((item) => (
-            <ListItem
-              key={item.text}
-              selected={location.pathname === item.path}
-              onClick={() => {
-                navigate(item.path);
-                setMobileOpen(false);
-              }}
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.125rem', lineHeight: 1.2 }}>
+            HealthBridge
+          </Typography>
+          <Typography variant="caption" sx={{ opacity: 0.9, fontSize: '0.75rem' }}>
+            Namibia
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Search Bar */}
+      <Box sx={{ p: 2, pb: 1 }}>
+        <Paper
+          component="div"
+          sx={{
+            p: '4px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: alpha('#f1f5f9', 0.8),
+            borderRadius: 2,
+            border: '1px solid #e2e8f0',
+            '&:hover': {
+              backgroundColor: '#f8fafc',
+              borderColor: '#cbd5e1',
+            },
+            transition: 'all 0.2s',
+          }}
+        >
+          <SearchIcon sx={{ color: '#64748b', fontSize: 20, mr: 1 }} />
+          <InputBase
+            placeholder="Search menu..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            sx={{
+              flex: 1,
+              fontSize: '0.875rem',
+              '& input': {
+                padding: 0,
+                '&::placeholder': {
+                  opacity: 0.6,
+                },
+              },
+            }}
+          />
+          {searchQuery && (
+            <IconButton
+              size="small"
+              onClick={() => setSearchQuery('')}
+              sx={{ p: 0.5, color: '#64748b' }}
+            >
+              <CloseIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          )}
+        </Paper>
+      </Box>
+
+      {/* Navigation Groups */}
+      <Box sx={{ flex: 1, overflow: 'auto', pt: 1 }}>
+        <List sx={{ py: 0 }}>
+          {filteredGroups.map((group) => {
+            const isExpanded = expandedGroups[group.title] ?? false;
+            const hasActiveItem = group.items.some((item) => location.pathname === item.path);
+
+            return (
+              <React.Fragment key={group.title}>
+                {group.items.length > 1 ? (
+                  <>
+                    <ListItem
+                      onClick={() => toggleGroup(group.title)}
+                      sx={{
+                        px: 2,
+                        py: 1,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: alpha('#2563eb', 0.04),
+                        },
+                      }}
+                    >
+                      <ListItemText
+                        primary={
+                          <Typography
+                            variant="overline"
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: '0.75rem',
+                              letterSpacing: '0.5px',
+                              color: hasActiveItem ? '#2563eb' : '#64748b',
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            {group.title}
+                          </Typography>
+                        }
+                      />
+                      {isExpanded ? (
+                        <ExpandLess sx={{ color: '#64748b', fontSize: 20 }} />
+                      ) : (
+                        <ExpandMore sx={{ color: '#64748b', fontSize: 20 }} />
+                      )}
+                    </ListItem>
+                    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                      <List component="div" disablePadding>
+                        {group.items.map((item) => {
+                          const isSelected = location.pathname === item.path;
+                          return (
+                            <ListItem
+                              key={item.text}
+                              selected={isSelected}
+                              onClick={() => handleNavigation(item.path)}
+                              sx={{
+                                pl: 4,
+                                pr: 2,
+                                py: 0.75,
+                                mx: 1,
+                                mb: 0.5,
+                                borderRadius: 2,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease-in-out',
+                                '&:hover': {
+                                  backgroundColor: alpha('#2563eb', 0.08),
+                                  transform: 'translateX(4px)',
+                                },
+                                '&.Mui-selected': {
+                                  backgroundColor: alpha('#2563eb', 0.12),
+                                  color: '#2563eb',
+                                  '&:hover': {
+                                    backgroundColor: alpha('#2563eb', 0.16),
+                                  },
+                                  '& .MuiListItemIcon-root': {
+                                    color: '#2563eb',
+                                  },
+                                },
+                              }}
+                            >
+                              <ListItemIcon
+                                sx={{
+                                  minWidth: 40,
+                                  color: isSelected ? '#2563eb' : '#64748b',
+                                }}
+                              >
+                                {item.icon}
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={item.text}
+                                primaryTypographyProps={{
+                                  fontWeight: isSelected ? 600 : 500,
+                                  fontSize: '0.9375rem',
+                                }}
+                              />
+                              {item.badge && (
+                                <Chip
+                                  label={item.badge}
+                                  size="small"
+                                  sx={{
+                                    height: 20,
+                                    fontSize: '0.7rem',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                  }}
+                                />
+                              )}
+                            </ListItem>
+                          );
+                        })}
+                      </List>
+                    </Collapse>
+                  </>
+                ) : (
+                  // Single item groups (like Dashboard) don't need collapse
+                  group.items.map((item) => {
+                    const isSelected = location.pathname === item.path;
+                    return (
+                      <ListItem
+                        key={item.text}
+                        selected={isSelected}
+                        onClick={() => handleNavigation(item.path)}
+                        sx={{
+                          px: 2,
+                          py: 1.25,
+                          mx: 1,
+                          mb: 0.5,
+                          borderRadius: 2,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            backgroundColor: alpha('#2563eb', 0.08),
+                            transform: 'translateX(4px)',
+                          },
+                          '&.Mui-selected': {
+                            backgroundColor: alpha('#2563eb', 0.12),
+                            color: '#2563eb',
+                            '&:hover': {
+                              backgroundColor: alpha('#2563eb', 0.16),
+                            },
+                            '& .MuiListItemIcon-root': {
+                              color: '#2563eb',
+                            },
+                          },
+                        }}
+                      >
+                        <ListItemIcon
+                          sx={{
+                            minWidth: 40,
+                            color: isSelected ? '#2563eb' : '#64748b',
+                          }}
+                        >
+                          {item.icon}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={item.text}
+                          primaryTypographyProps={{
+                            fontWeight: isSelected ? 600 : 500,
+                            fontSize: '0.9375rem',
+                          }}
+                        />
+                      </ListItem>
+                    );
+                  })
+                )}
+                {group.title !== filteredGroups[filteredGroups.length - 1].title && (
+                  <Divider sx={{ my: 1, mx: 2 }} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </List>
+      </Box>
+
+      {/* User Info Footer */}
+      <Box
+        sx={{
+          p: 2,
+          borderTop: '1px solid #e2e8f0',
+          backgroundColor: '#f8fafc',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+          <Avatar
+            sx={{
+              width: 36,
+              height: 36,
+              background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+            }}
+          >
+            {user?.firstName?.[0]}{user?.lastName?.[0]}
+          </Avatar>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              variant="body2"
               sx={{
-                mx: 1,
-                mb: 0.5,
-                borderRadius: 2,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  backgroundColor: 'rgba(37, 99, 235, 0.08)',
-                  transform: 'translateX(4px)',
-                },
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(37, 99, 235, 0.12)',
-                  color: '#2563eb',
-                  '&:hover': {
-                    backgroundColor: 'rgba(37, 99, 235, 0.16)',
-                  },
-                  '& .MuiListItemIcon-root': {
-                    color: '#2563eb',
-                  },
-                },
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                color: '#1e293b',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
-              <ListItemIcon
-                sx={{
-                  minWidth: 40,
-                  color: location.pathname === item.path ? '#2563eb' : 'inherit',
-                }}
-              >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText
-                primary={item.text}
-                primaryTypographyProps={{
-                  fontWeight: location.pathname === item.path ? 600 : 500,
-                  fontSize: '0.9375rem',
-                }}
-              />
-            </ListItem>
-          ))}
-        </List>
+              {user?.firstName} {user?.lastName}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: '#64748b',
+                fontSize: '0.75rem',
+                textTransform: 'capitalize',
+              }}
+            >
+              {user?.role?.toLowerCase().replace('_', ' ')}
+            </Typography>
+          </Box>
+        </Box>
       </Box>
     </Box>
   );
@@ -251,9 +661,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           backgroundColor: 'white',
           color: '#1e293b',
           borderBottom: '1px solid #e2e8f0',
+          zIndex: (theme) => theme.zIndex.drawer + 1,
         }}
       >
-        <Toolbar sx={{ minHeight: '64px !important' }}>
+        <Toolbar sx={{ minHeight: '72px !important', px: { xs: 2, sm: 3 } }}>
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -264,26 +675,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               display: { sm: 'none' },
               color: '#64748b',
               '&:hover': {
-                backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                backgroundColor: alpha('#2563eb', 0.08),
               },
             }}
           >
             <MenuIcon />
           </IconButton>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
-            <Box
-              component="img"
-              src={logoPath}
-              alt="HealthBridge Logo"
-              onError={(e: any) => {
-                e.target.style.display = 'none';
-              }}
-              sx={{
-                height: 32,
-                width: 'auto',
-                objectFit: 'contain',
-              }}
-            />
             <Typography
               variant="h6"
               noWrap
@@ -291,29 +689,27 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               sx={{
                 fontWeight: 600,
                 color: '#1e293b',
-                fontSize: '1.125rem',
+                fontSize: '1.25rem',
+                display: { xs: 'none', md: 'block' },
               }}
             >
-              HealthBridge Namibia
+              {location.pathname === '/dashboard'
+                ? 'Dashboard'
+                : location.pathname
+                    .split('/')
+                    .pop()
+                    ?.split('-')
+                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ') || 'HealthBridge'}
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <LanguageSelector />
-            <Typography
-              variant="body2"
-              sx={{
-                display: { xs: 'none', sm: 'block' },
-                color: '#64748b',
-                fontWeight: 500,
-              }}
-            >
-              {user?.firstName} {user?.lastName}
-            </Typography>
             <IconButton
               onClick={handleMenuClick}
               sx={{
                 '&:hover': {
-                  backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                  backgroundColor: alpha('#2563eb', 0.08),
                 },
               }}
             >
@@ -333,38 +729,60 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               anchorEl={anchorEl}
               open={Boolean(anchorEl)}
               onClose={handleMenuClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
               PaperProps={{
                 elevation: 4,
                 sx: {
                   mt: 1.5,
                   borderRadius: 2,
-                  minWidth: 180,
+                  minWidth: 200,
                   boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                 },
               }}
             >
+              <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid #e2e8f0' }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                  {user?.firstName} {user?.lastName}
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#64748b', textTransform: 'capitalize' }}>
+                  {user?.role?.toLowerCase().replace('_', ' ')}
+                </Typography>
+              </Box>
               <MenuItem
                 onClick={() => {
                   navigate('/profile');
                   handleMenuClose();
                 }}
                 sx={{
+                  py: 1.5,
                   '&:hover': {
-                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                    backgroundColor: alpha('#2563eb', 0.08),
                   },
                 }}
               >
-                <PersonIcon sx={{ mr: 1.5, fontSize: 20 }} /> Profile
+                <PersonIcon sx={{ mr: 1.5, fontSize: 20, color: '#64748b' }} />
+                <Typography variant="body2">Profile</Typography>
               </MenuItem>
               <MenuItem
                 onClick={handleLogout}
                 sx={{
+                  py: 1.5,
                   '&:hover': {
-                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                    backgroundColor: alpha('#ef4444', 0.08),
                   },
                 }}
               >
-                <LogoutIcon sx={{ mr: 1.5, fontSize: 20 }} /> Logout
+                <LogoutIcon sx={{ mr: 1.5, fontSize: 20, color: '#ef4444' }} />
+                <Typography variant="body2" sx={{ color: '#ef4444' }}>
+                  Logout
+                </Typography>
               </MenuItem>
             </Menu>
           </Box>
@@ -372,13 +790,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </AppBar>
       <Box
         component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        sx={{
+          width: { sm: drawerWidth },
+          flexShrink: { sm: 0 },
+        }}
       >
         <Drawer
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
+          ModalProps={{
+            keepMounted: true,
+          }}
           sx={{
             display: { xs: 'block', sm: 'none' },
             '& .MuiDrawer-paper': {
@@ -400,6 +823,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               width: drawerWidth,
               borderRight: '1px solid #e2e8f0',
               backgroundColor: '#ffffff',
+              overflow: 'hidden',
             },
           }}
           open
@@ -411,12 +835,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 2, sm: 3 },
           width: { sm: `calc(100% - ${drawerWidth}px)` },
+          backgroundColor: '#f8fafc',
+          minHeight: '100vh',
         }}
       >
         <Toolbar />
-        {children}
+        <Box sx={{ maxWidth: '1400px', mx: 'auto' }}>{children}</Box>
       </Box>
     </Box>
   );

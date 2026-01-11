@@ -252,20 +252,26 @@ Key relationships in the system:
 ## Tech Stack
 
 ### Backend
-- Node.js with Express
-- TypeScript
-- PostgreSQL with Prisma ORM
+- Node.js 18+ with Express
+- TypeScript 5.3+
+- PostgreSQL 14+ with Prisma ORM
 - JWT Authentication
 - File upload handling (Multer)
+- Build: TypeScript compiler (tsc) → JavaScript
+- Dev: tsx for hot-reloading
 
 ### Frontend (Web)
-- React with TypeScript
-- Material-UI for components
+- React 18 with TypeScript
+- Vite 5 for build tooling and dev server
+- Material-UI (MUI) for components
 - React Router for navigation
 - Axios for API calls
+- React Query for data fetching
+- i18next for internationalization
 
 ### Mobile
 - React Native with TypeScript
+- Expo SDK 54
 - React Navigation
 - AsyncStorage for local storage
 
@@ -477,6 +483,70 @@ HealthBridge-Namibia/
 - **[MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)** - Database migration guide for Docker
 - **[docs/README.md](./docs/README.md)** - Documentation index
 
+## Build & Deployment
+
+### Build Process
+
+#### Backend Build
+The backend is built using TypeScript:
+- **Development**: Uses `tsx watch` for hot-reloading (`npm run dev`)
+- **Production**: Compiles TypeScript to JavaScript in `dist/` directory (`npm run build`)
+- **Docker**: Uses Node.js 18-slim base image, installs Prisma CLI, generates Prisma Client
+
+**Build Output**: `backend/dist/` directory containing compiled JavaScript files
+
+#### Frontend Build
+The frontend is built using Vite:
+- **Development**: Vite dev server with HMR (`npm run dev`)
+- **Production**: Static asset build optimized for production (`npm run build`)
+- **Docker**: Uses Node.js 18-alpine base image, runs Vite dev server in container
+
+**Build Output**: `frontend/dist/` directory containing optimized static assets
+
+#### Mobile Build
+The mobile app uses Expo:
+- **Development**: Expo development server (`npm start`)
+- **Production**: Use Expo CLI for building native apps (`expo build:android` / `expo build:ios`)
+
+### Production Build
+
+**Backend Production**:
+```bash
+cd backend
+npm run build                      # Compile TypeScript
+npm start                          # Run compiled JavaScript
+```
+
+**Frontend Production**:
+```bash
+cd frontend
+npm run build                      # Create production bundle
+# Serve dist/ directory with a static file server (nginx, etc.)
+```
+
+**Docker Production**:
+```bash
+# Build production images
+docker-compose --profile production build
+
+# Start production services
+docker-compose --profile production up -d
+
+# Note: Production requires environment variables:
+# - PROD_DATABASE_URL
+# - PROD_JWT_SECRET
+# - PROD_FRONTEND_URL (optional)
+# - PROD_MOBILE_URL (optional)
+```
+
+### Build Requirements
+
+- **Node.js**: 18+ (required for all components)
+- **Docker**: For containerized builds and database
+- **Prisma**: Installed globally or via npm (for backend migrations)
+- **TypeScript**: 5.3+ (for backend and frontend)
+- **Expo CLI**: For mobile production builds (install globally: `npm install -g expo-cli`)
+
 ## Development
 
 ### Project Structure
@@ -517,13 +587,48 @@ HealthBridge-Namibia/
 
 ### Key Technologies
 
-- **Backend**: Express.js, TypeScript, Prisma ORM, JWT, bcrypt
-- **Frontend**: React, TypeScript, Material-UI, React Router, React Query
-- **Mobile**: React Native, Expo, TypeScript
-- **Database**: PostgreSQL 14+
-- **Containerization**: Docker, Docker Compose
+- **Backend**: Express.js, TypeScript, Prisma ORM, JWT, bcrypt, tsx (dev), tsc (build)
+- **Frontend**: React, TypeScript, Vite, Material-UI, React Router, React Query, i18next
+- **Mobile**: React Native, Expo SDK 54, TypeScript, React Navigation
+- **Database**: PostgreSQL 14+ with Prisma ORM
+- **Containerization**: Docker, Docker Compose (with profiles: local, production, load-test)
+- **Build Tools**: TypeScript Compiler, Vite, Expo CLI
 - **Payment**: PayToday, SnapScan integration
 - **Security**: AES-256-GCM, 2FA (TOTP), JWT
+
+### Build Commands
+
+**Backend Build**:
+```bash
+cd backend
+npm run build                      # Compile TypeScript to dist/
+npm start                          # Run production build
+```
+
+**Frontend Build**:
+```bash
+cd frontend
+npm run build                      # Build production bundle (Vite)
+npm run preview                    # Preview production build locally
+```
+
+**Mobile Build**:
+```bash
+cd mobile
+npm start                          # Start Expo development server
+# For production builds, use Expo CLI:
+# expo build:android or expo build:ios
+```
+
+**Root Level Build Scripts**:
+```bash
+# Build all components
+npm run build:backend              # Build backend
+npm run build:frontend             # Build frontend
+
+# Install all dependencies
+npm run install:all                # Install root + all workspaces
+```
 
 ### Common Tasks
 
@@ -537,9 +642,13 @@ npx prisma studio                   # View database
 
 **Running Services**:
 ```bash
-docker-compose up -d               # Start all services
-docker-compose logs -f            # View logs
-docker-compose down               # Stop all services
+# Development (local profile)
+docker-compose --profile local up -d    # Start all services
+docker-compose logs -f                  # View logs
+docker-compose down                     # Stop all services
+
+# Production (production profile)
+docker-compose --profile production up -d
 ```
 
 **Development**:
@@ -552,6 +661,18 @@ cd frontend && npm run dev
 
 # Mobile
 cd mobile && npm start
+```
+
+**Docker Build**:
+```bash
+# Build backend image
+docker build -t healthbridge-backend ./backend
+
+# Build frontend image
+docker build -t healthbridge-frontend ./frontend
+
+# Build all services
+docker-compose build
 ```
 
 ## Contributing
