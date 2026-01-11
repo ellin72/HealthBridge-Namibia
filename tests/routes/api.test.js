@@ -31,16 +31,20 @@ describe('API Routes', () => {
     };
 
     const adminRegister = await makeRequest('POST', '/auth/register', adminData, null, { expectedStatus: 201 });
-    if (adminRegister.success) {
+    if (adminRegister.success && adminRegister.data && adminRegister.data.user) {
       testUsers.admin = adminRegister.data.user;
       const adminLogin = await makeRequest('POST', '/auth/login', {
         email: adminData.email,
         password: adminData.password
       });
-      if (adminLogin.success) {
+      if (adminLogin.success && adminLogin.data && adminLogin.data.token) {
         tokens.admin = adminLogin.data.token;
         getTracker().track('users', testUsers.admin.id);
+      } else {
+        console.warn('Admin login failed:', adminLogin.error || adminLogin.data);
       }
+    } else {
+      console.warn('Admin registration failed:', adminRegister.error || adminRegister.data, 'Status:', adminRegister.status);
     }
 
     // Create patient user
@@ -53,16 +57,20 @@ describe('API Routes', () => {
     };
 
     const patientRegister = await makeRequest('POST', '/auth/register', patientData, null, { expectedStatus: 201 });
-    if (patientRegister.success) {
+    if (patientRegister.success && patientRegister.data && patientRegister.data.user) {
       testUsers.patient = patientRegister.data.user;
       const patientLogin = await makeRequest('POST', '/auth/login', {
         email: patientData.email,
         password: patientData.password
       });
-      if (patientLogin.success) {
+      if (patientLogin.success && patientLogin.data && patientLogin.data.token) {
         tokens.patient = patientLogin.data.token;
         getTracker().track('users', testUsers.patient.id);
+      } else {
+        console.warn('Patient login failed:', patientLogin.error || patientLogin.data);
       }
+    } else {
+      console.warn('Patient registration failed:', patientRegister.error || patientRegister.data, 'Status:', patientRegister.status);
     }
 
     // Create provider user
@@ -75,16 +83,20 @@ describe('API Routes', () => {
     };
 
     const providerRegister = await makeRequest('POST', '/auth/register', providerData, null, { expectedStatus: 201 });
-    if (providerRegister.success) {
+    if (providerRegister.success && providerRegister.data && providerRegister.data.user) {
       testUsers.provider = providerRegister.data.user;
       const providerLogin = await makeRequest('POST', '/auth/login', {
         email: providerData.email,
         password: providerData.password
       });
-      if (providerLogin.success) {
+      if (providerLogin.success && providerLogin.data && providerLogin.data.token) {
         tokens.provider = providerLogin.data.token;
         getTracker().track('users', testUsers.provider.id);
+      } else {
+        console.warn('Provider login failed:', providerLogin.error || providerLogin.data);
       }
+    } else {
+      console.warn('Provider registration failed:', providerRegister.error || providerRegister.data, 'Status:', providerRegister.status);
     }
   });
 
@@ -106,8 +118,19 @@ describe('API Routes', () => {
         role: 'PATIENT'
       };
 
-      const response = await makeRequest('POST', '/auth/register', userData, null, { expectedStatus: 201 });
+      const response = await makeRequest('POST', '/auth/register', userData, null, { expectedStatus: [201, 400, 500] });
       
+      if (!response.success || response.status !== 201) {
+        console.error('Registration failed:', {
+          status: response.status,
+          error: response.error,
+          data: response.data,
+          expectedStatus: 201
+        });
+        // Don't fail the test immediately - let the assertions show the actual error
+      }
+      
+      expect(response.status).toBe(201);
       expect(response.success).toBe(true);
       expect(response.status).toBe(201);
       expect(response.data).toHaveProperty('user');
@@ -130,6 +153,10 @@ describe('API Routes', () => {
     });
 
     test('POST /api/auth/login - Valid credentials', async () => {
+      if (!testUsers.patient) {
+        throw new Error('Patient user not created in beforeAll - registration likely failed');
+      }
+      
       const response = await makeRequest('POST', '/auth/login', {
         email: testUsers.patient.email,
         password: 'Test123!@#'
@@ -146,6 +173,10 @@ describe('API Routes', () => {
     });
 
     test('POST /api/auth/login - Invalid credentials', async () => {
+      if (!testUsers.patient) {
+        throw new Error('Patient user not created in beforeAll - registration likely failed');
+      }
+      
       const response = await makeRequest('POST', '/auth/login', {
         email: testUsers.patient.email,
         password: 'WrongPassword123!'

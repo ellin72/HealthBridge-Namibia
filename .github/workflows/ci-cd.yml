@@ -165,7 +165,11 @@ jobs:
           cd backend
           export DATABASE_URL="postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public"
           # Try migrate deploy first (for production/CI), fallback to db push if no migrations exist
+          echo "Running database migrations..."
           npx prisma migrate deploy || npx prisma db push --accept-data-loss
+          echo "✅ Migrations completed"
+        env:
+          DATABASE_URL: postgresql://healthbridge:healthbridge123@localhost:5432/healthbridge_test?schema=public
       
       - name: Build backend
         run: |
